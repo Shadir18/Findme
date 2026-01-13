@@ -6,8 +6,17 @@ import random
 app = Flask(__name__)
 CORS(app) 
 
-app.config["MONGO_URI"] = "mongodb://localhost:27017/FindMe"
+# Make sure 'yourPassword' is the DATABASE USER password
+app.config["MONGO_URI"] = "mongodb+srv://mshadir287_db_user:it8oDNVQWClkwzjE@findme.j2uw9kp.mongodb.net/FindMe?retryWrites=true&w=majority"
 mongo = PyMongo(app)
+
+with app.app_context():
+    try:
+        # This force-checks the connection
+        mongo.cx.admin.command('ping')
+        print("MongoDB Atlas connection successful!")
+    except Exception as e:
+        print(f"MongoDB connection failed: {e}")
 
 # --- Authentication Routes ---
 

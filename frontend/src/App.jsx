@@ -3,13 +3,16 @@ import LoadingScreen from './components/LoadingScreen';
 import HomeView from './components/HomeView';
 import LoginView from './components/LoginView';
 import SignUpView from './components/SignUpView';
+import OwnerSignUpView from './components/OwnerSignUpView'; 
 import ProfileView from './components/ProfileView';
+import OwnerDashboard from './components/OwnerDashboard'; // New Import
 import OTPView from './components/OTPView';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('home'); 
   const [user, setUser] = useState(null);
+  const [regType, setRegType] = useState('player'); 
   const [tempPhone, setTempPhone] = useState('');
   const [tempPref, setTempPref] = useState(null); 
 
@@ -18,8 +21,11 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleDiscoveryStart = (preferences) => {
-    setTempPref(preferences);
+  // Centralized navigation handler
+  const handleDiscoveryStart = (type, preferences = null) => {
+    setRegType(type);
+    if (preferences) setTempPref(preferences);
+    
     if (!user) {
       setView('signup'); 
     } else {
@@ -43,37 +49,33 @@ function App() {
           {!user ? (
             <>
               <button onClick={() => setView('login')} className="text-sm font-bold hover:text-blue-400 transition-colors">Login</button>
-              <button onClick={() => setView('signup')} className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg shadow-blue-600/20">Sign up</button>
+              <button 
+                onClick={() => { setRegType('player'); setView('signup'); }} 
+                className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg shadow-blue-600/20"
+              >
+                Sign up
+              </button>
             </>
           ) : (
-            /* AUTHENTICATED USER UI */
-            <div className="flex items-center gap-4">
-               <span className="hidden md:block text-[10px] font-bold text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
-                 Athlete Verified
-               </span>
-               
-               {/* User Profile Trigger */}
-               <button 
-                onClick={() => setView('profile')}
-                className="flex items-center gap-3 bg-white/5 hover:bg-white/10 p-1 pr-4 rounded-full border border-white/10 transition-all group"
-               >
-                 <div className="w-8 h-8 rounded-full bg-blue-600 overflow-hidden flex items-center justify-center border border-white/20">
-                    {user.profile_photo ? (
-                      <img src={user.profile_photo} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs font-black">{user.full_name?.charAt(0)}</span>
-                    )}
-                 </div>
-                 <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">
-                    {user.full_name?.split(' ')[0]}
-                 </span>
-               </button>
-            </div>
+            <button 
+              onClick={() => setView('profile')} 
+              className="flex items-center gap-3 bg-white/5 hover:bg-white/10 p-1 pr-4 rounded-full border border-white/10 transition-all group"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center border border-white/20">
+                <span className="text-xs font-black">
+                  {(user.full_name || user.name || user.owner_name)?.charAt(0)}
+                </span>
+              </div>
+              <span className="text-xs font-bold text-slate-300 group-hover:text-white">
+                {user.role === 'owner' ? 'Owner Portal' : (user.full_name || user.name).split(' ')[0]}
+              </span>
+            </button>
           )}
         </div>
       </nav>
 
       <main className="pt-20">
+        {/* VIEW ROUTING LOGIC */}
         {view === 'home' && <HomeView onStart={handleDiscoveryStart} />}
         
         {view === 'login' && (
@@ -84,15 +86,26 @@ function App() {
         )}
         
         {view === 'signup' && (
-          <SignUpView 
-            preSelectedPref={tempPref}
-            onAuthSuccess={(userData) => {
-              setTempPhone(userData.phone);
-              setUser(userData); 
-              setView('otp'); 
-            }} 
-            onSwitchToLogin={() => setView('login')} 
-          />
+          regType === 'player' ? (
+            <SignUpView 
+              preSelectedPref={tempPref}
+              onAuthSuccess={(userData) => {
+                setTempPhone(userData.phone);
+                setUser(userData); 
+                setView('otp'); 
+              }} 
+              onSwitchToLogin={() => setView('login')} 
+            />
+          ) : (
+            <OwnerSignUpView 
+              onAuthSuccess={(userData) => {
+                setTempPhone(userData.phone);
+                setUser(userData); 
+                setView('otp'); 
+              }} 
+              onSwitchToLogin={() => setView('login')}
+            />
+          )
         )}
 
         {view === 'otp' && (
@@ -103,10 +116,18 @@ function App() {
         )}
 
         {view === 'profile' && (
-          <ProfileView 
-            user={user} 
-            onLogout={() => { setUser(null); setView('home'); }} 
-          />
+          /* ROLE-BASED DASHBOARD SWITCH */
+          user?.role === 'owner' ? (
+            <OwnerDashboard 
+              user={user} 
+              onLogout={() => { setUser(null); setView('home'); }} 
+            />
+          ) : (
+            <ProfileView 
+              user={user} 
+              onLogout={() => { setUser(null); setView('home'); }} 
+            />
+          )
         )}
       </main>
     </div>

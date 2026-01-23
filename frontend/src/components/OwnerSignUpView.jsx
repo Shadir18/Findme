@@ -11,10 +11,13 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
     province: '',
     district: '',
     town: '',
+    address: '',
     hourly_rate: '',
     opening_time: '06:00',
     closing_time: '23:00',
-    turf_image: null
+    turf_image: null,
+    // NEW: List of facilities with sport type and quantity
+    facilities: [{ sport: 'Football', count: 1, isMultipurpose: false }]
   });
 
   const [error, setError] = useState('');
@@ -37,6 +40,28 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
     }
   };
 
+  const sportsList = ["Football", "Cricket", "Badminton", "Basketball", "Tennis", "Futsal"];
+
+  // Handlers for dynamic facility fields
+  const addFacility = () => {
+    setFormData({
+      ...formData,
+      facilities: [...formData.facilities, { sport: 'Football', count: 1, isMultipurpose: false }]
+    });
+  };
+
+  const removeFacility = (index) => {
+    const updated = formData.facilities.filter((_, i) => i !== index);
+    setFormData({ ...formData, facilities: updated });
+  };
+
+  const updateFacility = (index, field, value) => {
+    const updated = formData.facilities.map((fac, i) => 
+      i === index ? { ...fac, [field]: value } : fac
+    );
+    setFormData({ ...formData, facilities: updated });
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -52,7 +77,6 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
     e.preventDefault();
     setError('');
 
-    // Password Validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
       return;
@@ -74,13 +98,13 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
 
   return (
     <div className="flex items-center justify-center min-h-screen py-20 px-4">
-      <div className="w-full max-w-3xl bg-white/[0.03] backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-4xl bg-white/[0.03] backdrop-blur-xl border border-white/10 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
         
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl -z-10"></div>
 
         <div className="text-center mb-10">
           <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">
-            List Your <span className="text-blue-500">Turf</span>
+            List Your <span className="text-blue-500">Indoor</span>
           </h2>
           <p className="text-slate-500 text-sm mt-2">Professional Indoor Management Portal</p>
         </div>
@@ -93,7 +117,7 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
 
         <form onSubmit={handleOwnerRegister} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Section 1: Basic Info */}
+          {/* General Information */}
           <div className="space-y-4 col-span-full">
              <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">General Information</label>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -104,22 +128,67 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
              </div>
           </div>
 
-          {/* Section 2: Pricing & Timing */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Rates & Timing</label>
-            
-            {/* LKR Styled Input */}
-            <div className="relative group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-xs tracking-tighter">LKR</div>
-                <input 
-                type="text" 
-                placeholder="Charge Per Hour" 
-                required 
-                className="w-full bg-white/5 p-4 pl-14 rounded-2xl border border-white/10 text-white outline-none focus:border-blue-500/50 font-mono"
-                onChange={(e) => setFormData({...formData, hourly_rate: e.target.value})} 
-                />
+          {/* DYNAMIC SPORTS & TURF COUNT SECTION */}
+          <div className="col-span-full bg-white/5 p-6 rounded-[2rem] border border-white/10 space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Available Sports & Inventory</label>
+              <button type="button" onClick={addFacility} className="bg-blue-600 text-[10px] px-4 py-2 rounded-full font-black uppercase tracking-tighter hover:bg-blue-500 transition-all">
+                + Add Sport
+              </button>
             </div>
 
+            {formData.facilities.map((fac, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-black/20 p-4 rounded-2xl border border-white/5 group">
+                <div>
+                  <label className="text-[8px] text-slate-500 uppercase font-black mb-1 block ml-2">Sport Type</label>
+                  <select 
+                    value={fac.sport}
+                    onChange={(e) => updateFacility(index, 'sport', e.target.value)}
+                    className="w-full bg-[#0f172a] p-3 rounded-xl border border-white/10 text-white text-xs outline-none"
+                  >
+                    {sportsList.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[8px] text-slate-500 uppercase font-black mb-1 block ml-2">Total Turfs/Courts</label>
+                  <input 
+                    type="number" min="1" value={fac.count}
+                    onChange={(e) => updateFacility(index, 'count', parseInt(e.target.value))}
+                    className="w-full bg-[#0f172a] p-3 rounded-xl border border-white/10 text-white text-xs outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center h-[46px] px-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" checked={fac.isMultipurpose}
+                      onChange={(e) => updateFacility(index, 'isMultipurpose', e.target.checked)}
+                      className="w-4 h-4 accent-blue-500"
+                    />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">Multipurpose Turf (Players can play Cricket & Football in same turf) </span>
+                  </label>
+                </div>
+
+                <div className="flex justify-end">
+                  {formData.facilities.length > 1 && (
+                    <button type="button" onClick={() => removeFacility(index)} className="text-red-500 text-[9px] font-black uppercase hover:underline">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pricing & Timing */}
+          <div className="space-y-4">
+            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Rates & Timing</label>
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 font-black text-xs tracking-tighter">LKR</div>
+              <input type="text" placeholder="Charge Per Hour" required className="w-full bg-white/5 p-4 pl-14 rounded-2xl border border-white/10 text-white outline-none focus:border-blue-500/50 font-mono"
+                onChange={(e) => setFormData({...formData, hourly_rate: e.target.value})} />
+            </div>
             <div className="flex gap-2 items-center">
               <input type="time" className="flex-1 bg-white/5 p-4 rounded-2xl border border-white/10 text-white outline-none text-xs" 
                 onChange={(e) => setFormData({...formData, opening_time: e.target.value})} />
@@ -129,7 +198,7 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
             </div>
           </div>
 
-          {/* Section 3: Photo Upload */}
+          {/* Photo Upload */}
           <div className="space-y-4">
             <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Turf Photo (Optional)</label>
             <div className="relative h-[115px] bg-white/5 border border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center group hover:border-blue-500/50 transition-all cursor-pointer overflow-hidden">
@@ -144,7 +213,7 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
             </div>
           </div>
 
-          {/* Section 4: Location */}
+          {/* Location Details */}
           <div className="space-y-4 col-span-full">
             <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Location Details</label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -166,19 +235,13 @@ export default function OwnerSignUpView({ onAuthSuccess }) {
             </div>
           </div>
 
-          {/* Physical Address Section */}
           <div className="space-y-4 col-span-full">
             <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Physical Address</label>
-            <textarea 
-              placeholder="Enter the full street address (e.g., No. 123, High Level Rd, Nugegoda)" 
-              required 
-              rows="2"
-              className="w-full bg-white/5 p-4 rounded-2xl border border-white/10 text-white outline-none focus:border-blue-500/50 resize-none"
-              onChange={(e) => setFormData({...formData, address: e.target.value})}
-            />
+            <textarea placeholder="No. 123, High Level Rd, Nugegoda" required rows="2" className="w-full bg-white/5 p-4 rounded-2xl border border-white/10 text-white outline-none focus:border-blue-500/50 resize-none"
+              onChange={(e) => setFormData({...formData, address: e.target.value})} />
           </div>
 
-          {/* Section 5: Security */}
+          {/* Security */}
           <div className="space-y-4 col-span-full">
             <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-2">Security & Credentials</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

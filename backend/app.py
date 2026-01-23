@@ -7,9 +7,11 @@ app = Flask(__name__)
 CORS(app) 
 
 # MongoDB Atlas Connection
+# Ensure this URI is correct for your specific cluster
 app.config["MONGO_URI"] = "mongodb+srv://mshadir287_db_user:it8oDNVQWClkwzjE@findme.j2uw9kp.mongodb.net/FindMe?retryWrites=true&w=majority"
 mongo = PyMongo(app)
 
+# Verification of database connection on startup
 with app.app_context():
     try:
         mongo.cx.admin.command('ping')
@@ -17,14 +19,14 @@ with app.app_context():
     except Exception as e:
         print(f"❌ MongoDB connection failed: {e}")
 
-# --- Authentication Routes ---
+# --- 1. AUTHENTICATION ROUTES ---
 
 @app.route('/api/register', methods=['POST'])
 def register_user():
+    """Handles standard Athlete/Player registration."""
     try:
         data = request.json
-        existing_user = mongo.db.Users.find_one({"email": data.get('email')})
-        if existing_user:
+        if mongo.db.Users.find_one({"email": data.get('email')}):
             return jsonify({"error": "Email already registered"}), 400
 
         user_data = {
@@ -37,20 +39,23 @@ def register_user():
             "role": "player",
             "profile_photo": None
         }
-        
         mongo.db.Users.insert_one(user_data)
+        
+        # Convert _id to string for JSON return
+        user_data['_id'] = str(user_data['_id'])
         return jsonify({"message": "User registered successfully!", "user": user_data}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/register/owner', methods=['POST'])
 def register_owner():
+    """Handles Turf Owner registration with multi-sport and facility details."""
     try:
         data = request.json
-        existing_user = mongo.db.Users.find_one({"email": data.get('email')})
-        if existing_user:
+        if mongo.db.Users.find_one({"email": data.get('email')}):
             return jsonify({"error": "Email already registered"}), 400
 
+        # A. Create Owner Account in Users Collection
         owner_account = {
             "name": data.get('owner_name'),
             "email": data.get('email'),
@@ -60,6 +65,7 @@ def register_owner():
         }
         user_id = mongo.db.Users.insert_one(owner_account).inserted_id
 
+        # B. Create Facility Entry in Indoors Collection
         indoor_facility = {
             "owner_id": user_id,
             "name": data.get('indoor_name'),
@@ -71,32 +77,31 @@ def register_owner():
             "opening_time": data.get('opening_time'),
             "closing_time": data.get('closing_time'),
             "turf_image": data.get('turf_image'),
-            "calendar_availability": {} # The 365-day schedule object
+            "facilities": data.get('facilities', []), # Multi-sport array from frontend
+            "calendar_availability": {} # Managed via Owner Dashboard
         }
         mongo.db.Indoors.insert_one(indoor_facility)
 
-        return jsonify({"message": "Owner and Facility registered!", "user": owner_account}), 201
+        owner_account['_id'] = str(user_id)
+        return jsonify({"message": "Facility registered successfully!", "user": owner_account}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
 def login():
+    """Generic login for both roles."""
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
-    user = mongo.db.Users.find_one({"email": email, "password": password})
-
+    user = mongo.db.Users.find_one({"email": data.get('email'), "password": data.get('password')})
     if user:
         user['_id'] = str(user['_id'])
         return jsonify({"status": "Success", "user": user}), 200
-    else:
-        return jsonify({"error": "Invalid email or password"}), 401
+    return jsonify({"error": "Invalid email or password"}), 401
 
-# --- Indoor & Calendar Management ---
+# --- 2. INDOOR & SCHEDULE MANAGEMENT ---
 
 @app.route('/api/indoor/update-schedule', methods=['POST'])
 def update_schedule():
-    """Consolidated route to update the calendar availability."""
+    """Updates the 365-day calendar for a specific turf."""
     try:
         data = request.json
         email = data.get('email')
@@ -110,52 +115,40 @@ def update_schedule():
             {"owner_id": user['_id']},
             {"$set": {"calendar_availability": new_calendar}}
         )
-        return jsonify({"message": "Calendar Updated Successfully!"}), 200
+        return jsonify({"message": "Calendar Sync Successful!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/indoors/nearby', methods=['GET'])
 def get_nearby_indoors():
-    """Supports fetching by town for players or by email for the owner dashboard."""
+    """Fetches turfs based on location, sport type, or owner email."""
     email = request.args.get('email')
     town = request.args.get('town')
+    sport = request.args.get('sport')
     
+    query = {}
     if email:
         user = mongo.db.Users.find_one({"email": email})
-        if user:
-            indoors = list(mongo.db.Indoors.find({"owner_id": user['_id']}))
-        else:
-            return jsonify([]), 404
+        if user: query = {"owner_id": user['_id']}
     elif town:
-        indoors = list(mongo.db.Indoors.find({"town": town}))
-    else:
-        indoors = list(mongo.db.Indoors.find())
+        query["town"] = town
+    
+    if sport:
+        # Searches within the multi-sport facilities array
+        query["facilities.sport"] = sport
 
-    # Format for JSON
+    indoors = list(mongo.db.Indoors.find(query))
     for i in indoors:
         i['_id'] = str(i['_id'])
         i['owner_id'] = str(i['owner_id'])
         
     return jsonify(indoors), 200
 
-# --- Photo Management ---
-
-@app.route('/api/user/update-photo', methods=['POST'])
-def update_photo():
-    try:
-        data = request.json
-        mongo.db.Users.update_one(
-            {"email": data.get('email')},
-            {"$set": {"profile_photo": data.get('image')}}
-        )
-        return jsonify({"message": "Photo updated"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- Player Discovery ---
+# --- 3. DISCOVERY & UTILITY ---
 
 @app.route('/api/players', methods=['GET'])
 def get_players():
+    """Discovery route to find other players in the same area."""
     area = request.args.get('area')
     query = {"role": "player"}
     if area:
@@ -165,10 +158,12 @@ def get_players():
 
 @app.route('/api/verify-otp', methods=['POST'])
 def verify_otp():
+    """Simple OTP verification mock."""
     data = request.json
     if data.get('otp') == "123456":
         return jsonify({"status": "success"}), 200
-    return jsonify({"status": "error"}), 400
+    return jsonify({"status": "error", "message": "Invalid OTP"}), 400
 
 if __name__ == '__main__':
+    # Running on port 5000 as configured in your React fetch calls
     app.run(debug=True, port=5000)

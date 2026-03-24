@@ -1,0 +1,14 @@
+# Node (React)
+node_modules/
+dist/
+.env
+
+# Python (Flask)
+venv/
+__pycache__/
+*.pyc
+instance/
+.pytest_cache/
+
+# OS generated files
+.DS_Store

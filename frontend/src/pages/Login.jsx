@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Added loading state
+
+  const navigate = useNavigate(); // The tool we use to teleport users
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
       const response = await fetch('http://127.0.0.1:5000/api/login', {
         method: 'POST',
@@ -19,13 +25,20 @@ export default function Login() {
       if (response.ok) {
         // Save the user data to the browser's vault
         localStorage.setItem('user', JSON.stringify(data));
-        // Force a hard reload to update the Navbar and go to Home
-        window.location.href = '/'; 
+        
+        // --- THIS IS THE NEW SMART ROUTING! ---
+        if (data.role === 'turf_owner') {
+          navigate('/owner-dashboard'); // Send owners to their command center
+        } else {
+          navigate('/dashboard'); // Send players to the turf finder
+        }
       } else {
         setError(data.error || "Login failed");
       }
     } catch (err) {
       setError("Failed to connect to the server.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,16 +94,16 @@ export default function Login() {
 
             <button 
               type="submit" 
-              className="w-full bg-blue-600 text-white py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg transform hover:-translate-y-1 active:scale-95"
+              disabled={loading}
+              className="w-full bg-blue-600 disabled:bg-blue-400 text-white py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg transform hover:-translate-y-1 active:scale-95"
             >
-              LOGIN TO FINDME
+              {loading ? 'AUTHENTICATING...' : 'LOGIN TO FINDME'}
             </button>
           </form>
 
           {/* Footer Action */}
           <div className="mt-8 text-center">
             <p className="text-gray-500 text-sm mb-2">Don't have an account yet?</p>
-            {/* Note: I changed your button to a React Router <Link> so it correctly routes to the signup page! */}
             <Link 
               to="/signup" 
               className="text-blue-700 font-black hover:text-blue-500 transition-colors uppercase tracking-wider text-sm inline-block"

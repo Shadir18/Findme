@@ -9,9 +9,10 @@ import Home from './pages/Home';
 import RegistrationForm from './components/RegistrationForm';
 import MatchGrid from './components/MatchGrid';
 
-// NEW: Importing your Login and Signup pages!
+// Importing your Login and Signup pages!
 import Signup from './pages/Signup';
 import Login from './pages/Login';
+import OwnerDashboard from './pages/OwnerDashboard';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -26,8 +27,9 @@ function App() {
   };
 
   useEffect(() => {
-    refreshData().then(() => {
-      setTimeout(() => setIsLoading(false), 1500);
+    // Resolve loading regardless of backend status
+    refreshData().catch(() => {}).finally(() => {
+      setTimeout(() => setIsLoading(false), 800);
     });
   }, []);
 
@@ -35,34 +37,33 @@ function App() {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        
-        <main className="flex-grow">
-          {/* THIS IS THE ROUTING SECTION YOU ASKED ABOUT! */}
-          <Routes>
-            <Route path="/" element={<Home />} />
-            
-            <Route path="/find-match" element={
-              <div className="p-8">
-                <RegistrationForm onPlayerAdded={refreshData} />
-                <MatchGrid matches={matchData} />
-              </div>
-            } />
-            
-            <Route path="/about" element={<div className="p-20 text-center text-2xl">About Page Content (Coming Soon)</div>} />
-            
-            {/* NEW: Login and Signup Routes */}
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            
-            {/* Catch-All Route */}
-            <Route path="*" element={<Home />} />
-          </Routes>
-        </main>
+      <Routes>
+        {/* ── Standalone routes – own full-screen layouts ─────────────────── */}
+        <Route path="/owner-dashboard" element={<OwnerDashboard />} />
 
-        <Footer />
-      </div>
+        {/* ── Standard layout routes – shared Navbar / Footer ─────────────── */}
+        <Route path="/*" element={
+          <div className="flex flex-col min-h-screen bg-gray-50">
+            <Navbar />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/find-match" element={
+                  <div className="p-8">
+                    <RegistrationForm onPlayerAdded={refreshData} />
+                    <MatchGrid matches={matchData} />
+                  </div>
+                } />
+                <Route path="/about" element={<div className="p-20 text-center text-2xl">About Page Content (Coming Soon)</div>} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="*" element={<Home />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        } />
+      </Routes>
     </Router>
   );
 }

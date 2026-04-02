@@ -5,6 +5,7 @@ from flask_cors import CORS
 from routes.auth_routes import auth_bp
 from routes.player_routes import player_bp
 from routes.match_routes import match_bp
+from routes.owner_routes import owner_bp
 
 app = Flask(__name__)
 CORS(app) 
@@ -17,6 +18,7 @@ def home():
 app.register_blueprint(auth_bp)
 app.register_blueprint(player_bp)
 app.register_blueprint(match_bp)
+app.register_blueprint(owner_bp)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True)

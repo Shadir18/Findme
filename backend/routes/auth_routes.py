@@ -46,7 +46,25 @@ def signup():
             new_account["turf_image"] = data.get("turf_image")
 
         # 5. Save the complete package to the database (Make sure it's db.users plural!)
-        db.users.insert_one(new_account)
+        result = db.users.insert_one(new_account)
+        owner_id = str(result.inserted_id)
+
+        # 6. Auto-generate the actual court records in db.courts based on facilities
+        if role == 'turf_owner':
+            facilities = new_account.get("facilities", [])
+            for fac in facilities:
+                sport = fac.get("sport", "Unknown")
+                count = int(fac.get("count", 1))
+                for i in range(count):
+                    court_name = f"{sport} Court {i+1}" if count > 1 else f"{sport} Court"
+                    db.courts.insert_one({
+                        "owner_id": owner_id,
+                        "name": court_name,
+                        "sport": sport,
+                        "capacity": 10 if sport in ['Futsal', 'Football'] else 4,
+                        "status": "Available",
+                        "available": True
+                    })
 
         return jsonify({"message": "Account created successfully!"}), 201
 
@@ -66,6 +84,7 @@ def login():
         if user and check_password_hash(user["password"], password):
             return jsonify({
                 "message": "Login successful!",
+                "_id": str(user["_id"]),
                 "name": user.get("name"),
                 "email": user.get("email"),
                 "role": user.get("role")

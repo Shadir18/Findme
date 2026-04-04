@@ -1,0 +1,4 @@
+User ID: 69c262cd68f1d8d5153cf86d
+Found 2 courts:
+{'_id': ObjectId('69d06e31300011d7cb9abc7d'), 'owner_id': '69c262cd68f1d8d5153cf86d', 'name': 'Futsal Court 1', 'sport': 'Futsal', 'capacity': 10, 'status': 'Available', 'available': True}
+{'_id': ObjectId('69d06e31300011d7cb9abc7e'), 'owner_id': '69c262cd68f1d8d5153cf86d', 'name': 'Futsal Court 2', 'sport': 'Futsal', 'capacity': 10, 'status': 'Available', 'available': True}

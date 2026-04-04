@@ -128,6 +128,36 @@ def update_court_status(court_id):
     )
     return jsonify({"success": True, "status": new_status, "available": new_status == 'Available'})
 
+@owner_bp.route('/api/owner/courts/<court_id>', methods=['PUT'])
+def update_court_details(court_id):
+    data = request.json
+    update_fields = {}
+    if 'name' in data:
+        update_fields['name'] = data['name']
+    if 'sport' in data:
+        update_fields['sport'] = data['sport']
+    if 'capacity' in data:
+        update_fields['capacity'] = int(data['capacity'])
+    if 'price_per_hour' in data:
+        update_fields['price_per_hour'] = float(data['price_per_hour']) if data['price_per_hour'] else ''
+    if 'pricing' in data:
+        update_fields['pricing'] = data['pricing']
+    
+    if not update_fields:
+        return jsonify({"error": "No fields to update"}), 400
+
+    court = db.courts.find_one({"_id": ObjectId(court_id)})
+    if not court:
+        return jsonify({"error": "Court not found"}), 404
+        
+    db.courts.update_one(
+        {"_id": ObjectId(court_id)},
+        {"$set": update_fields}
+    )
+    
+    update_fields['_id'] = str(court_id)
+    return jsonify({"success": True, "court": update_fields})
+
 @owner_bp.route('/api/owner/bookings/manual', methods=['POST'])
 def manual_booking():
     data = request.json

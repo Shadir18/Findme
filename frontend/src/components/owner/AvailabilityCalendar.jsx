@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 // Day-level calendar color coding
@@ -6,18 +7,35 @@ const LEVEL_STYLES = {
   available: 'text-gray-600 bg-white border-gray-100 hover:bg-gray-50 hover:border-gray-300',
   partial:   'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100',
   full:      'bg-red-50 text-red-600 border-red-200 hover:bg-red-100',
+  indoorMaintenance: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
 };
 
 // ── Hourly Booking Grid Modal ────────────────────────────────────────────────
-function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
+function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, setDetailModal }) {
   // ALL hooks MUST come before any conditional return (React Rules of Hooks)
   const [selectedCourt, setSelectedCourt] = useState(
     courts.length > 0 ? courts[0] : null
   );
   const [selectedCells, setSelectedCells] = useState([]);
+  const [recurrence, setRecurrence] = useState('none'); // New state for recurrence
 
   // Guard after hooks
-  if (!date || !selectedCourt) return null;
+  if (!date) return null;
+
+  if (courts.length === 0 || !selectedCourt) {
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+        <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl flex flex-col items-center text-center" onClick={e => e.stopPropagation()}>
+          <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">No Courts Registered</h3>
+          <p className="text-sm text-gray-500 mb-6">Please add at least one court in the <b>Court Management</b> tab before you can manage its schedule or accept bookings.</p>
+          <button onClick={onClose} className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition">Understood</button>
+        </div>
+      </div>
+    );
+  }
 
   // Build hour slots 06:00 → 23:00
   const hours = [];
@@ -34,10 +52,14 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
   const getCellStatus = (hour) => {
     const h = parseInt(hour);
 
-    if (selectedCourt.status === 'Maintenance')
-      return { type: 'maintenance', label: 'Maintenance' };
-    if (selectedCourt.status === 'Holiday' || selectedCourt.available === false)
+    if (selectedCourt.status === 'Indoor Maintenance') {
+      console.log(`Hour ${hour}: Indoor Maintenance`); // Debugging log
+      return { type: 'indoorMaintenance', label: 'Indoor Maintenance' };
+    }
+    if (selectedCourt.status === 'Holiday' || selectedCourt.available === false) {
+      console.log(`Hour ${hour}: Closed`); // Debugging log
       return { type: 'closed', label: 'Closed' };
+    }
 
     for (const b of dayBookings) {
       const parts = (b.time || '').split(' - ');
@@ -45,25 +67,36 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
         const startH = parseInt(parts[0]);
         const endH   = parseInt(parts[1]);
         if (h >= startH && h < endH) {
-          return { type: 'booked', label: b.team || 'Booked' };
+          console.log(`Hour ${hour}: Booked`); // Debugging log
+          return { type: 'booked', label: b.team || 'Booked', booking: b };
         }
       }
     }
-    return { type: 'available', label: 'Open' };
+
+    console.log(`Hour ${hour}: Available`); // Debugging log
+    return { type: 'available', label: 'Open', booking: null };
   };
 
   const toggleCell = (hour) => {
-    if (getCellStatus(hour).type !== 'available') return;
-    setSelectedCells(prev =>
-      prev.includes(hour) ? prev.filter(h => h !== hour) : [...prev, hour]
-    );
+    const cellStatus = getCellStatus(hour);
+    if (cellStatus.type !== 'available') return; // Ensure only available cells can be toggled
+
+    setSelectedCells((prev) => {
+      const isSelected = prev.includes(hour);
+      const updatedCells = isSelected
+        ? prev.filter((h) => h !== hour) // Remove hour if already selected
+        : [...prev, hour]; // Add hour if not selected
+
+      console.log('Updated selectedCells:', updatedCells); // Debugging log
+      return updatedCells;
+    });
   };
 
   const handleBook = () => {
     if (selectedCells.length === 0) return;
     const sorted = selectedCells.map(h => parseInt(h)).sort((a, b) => a - b);
     const timeSlot = `${String(sorted[0]).padStart(2, '0')}:00 - ${String(sorted[sorted.length - 1] + 1).padStart(2, '0')}:00`;
-    setShowAddBooking({ date, timeSlot, courtName: selectedCourt.name });
+    setShowAddBooking({ date, timeSlot, courtName: selectedCourt.name, recurrence });
     onClose();
   };
 
@@ -71,7 +104,8 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
   const CELL_COLOR = {
     closed:      'bg-red-500 text-white cursor-not-allowed border-red-600',
     maintenance: 'bg-yellow-400 text-yellow-900 cursor-not-allowed border-yellow-500',
-    booked:      'bg-green-500 text-white cursor-not-allowed border-green-600',
+    indoorMaintenance: 'bg-purple-500 text-white cursor-not-allowed border-purple-600',
+    booked:      'bg-green-500 text-white cursor-pointer border-green-600 hover:bg-green-600 hover:shadow-lg hover:scale-105',
     available:   'bg-white hover:bg-blue-50 text-gray-700 cursor-pointer border-gray-200 hover:border-blue-400',
     selected:    'bg-blue-600 text-white border-blue-700',
   };
@@ -119,11 +153,59 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
           </button>
         </div>
 
+        {/* Recurrence Options */}
+        <div className="px-6 py-3 border-b border-gray-100">
+          <label className="text-xs text-gray-500 font-semibold block mb-2">Recurrence:</label>
+          <select
+            value={recurrence}
+            onChange={e => setRecurrence(e.target.value)}
+            className="text-xs font-bold bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-gray-700 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        {/* Hour Grid */}
+        <div className="p-6 overflow-y-auto flex-1">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {hours.map(hour => {
+              const status = getCellStatus(hour);
+              const isSelected = selectedCells.includes(hour);
+              const activeType = isSelected && status.type === 'available' ? 'selected' : status.type;
+              const styleCls = CELL_COLOR[activeType] || CELL_COLOR.available;
+
+              return (
+                <button
+                  key={hour}
+                  disabled={status.type === 'closed' || status.type === 'maintenance' || status.type === 'indoorMaintenance'}
+                  onClick={() => {
+                    if (status.type === 'booked' && status.booking && setDetailModal) {
+                      setDetailModal(status.booking);
+                    } else if (status.type === 'available') {
+                      toggleCell(hour);
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-sm transition-all shadow-sm ${styleCls}`}
+                >
+                  <span className="font-bold">{hour}</span>
+                  <span className="text-[10px] font-medium leading-none mt-1.5 opacity-90 truncate max-w-[80px]">
+                    {status.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Legend */}
         <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-100 flex-wrap shrink-0">
           {[
             { bg: 'bg-red-500',    label: 'Closed' },
             { bg: 'bg-yellow-400', label: 'Maintenance' },
+            { bg: 'bg-purple-500', label: 'Indoor Maintenance' },
             { bg: 'bg-green-500',  label: 'Booked' },
             { bg: 'bg-white border border-gray-300', label: 'Available' },
             { bg: 'bg-blue-600',   label: 'Selected' },
@@ -133,31 +215,6 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
               <span className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">{l.label}</span>
             </div>
           ))}
-        </div>
-
-        {/* Scrollable Hour Grid */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="grid grid-cols-3 gap-2">
-            {hours.map(hour => {
-              const { type, label } = getCellStatus(hour);
-              const isSelected = selectedCells.includes(hour);
-              const state = isSelected ? 'selected' : type;
-
-              return (
-                <button
-                  key={hour}
-                  disabled={type !== 'available'}
-                  onClick={() => toggleCell(hour)}
-                  className={`py-3 px-2 rounded-xl border-2 font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${CELL_COLOR[state]}`}
-                >
-                  <span className="text-sm font-extrabold tracking-tight">{hour}</span>
-                  <span className="text-[9px] font-semibold uppercase tracking-wide opacity-90 truncate w-full text-center">
-                    {isSelected ? '✓ Selected' : label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Footer */}
@@ -187,7 +244,7 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking }) {
 }
 
 // ── Month-level Calendar ─────────────────────────────────────────────────────
-export default function AvailabilityCalendar({ bookings = [], courts = [], setShowAddBooking }) {
+export default function AvailabilityCalendar({ bookings = [], courts = [], setShowAddBooking, setDetailModal }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -280,14 +337,16 @@ export default function AvailabilityCalendar({ bookings = [], courts = [], setSh
         Click any day to view &amp; manage hourly time slots
       </p>
 
-      {selectedDay && (
+      {selectedDay && createPortal(
         <CalendarModal
           date={selectedDay}
           courts={courts}
           bookings={bookings}
           setShowAddBooking={setShowAddBooking}
+          setDetailModal={setDetailModal}
           onClose={() => setSelectedDay(null)}
-        />
+        />,
+        document.body
       )}
     </section>
   );

@@ -20,7 +20,7 @@ export default function OwnerHeader({ user, notifications, setNotifications, sho
   const [notifList, setNotifList] = useState(MOCK_NOTIFS);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
     navigate('/login');
   };
 

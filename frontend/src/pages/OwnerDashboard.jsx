@@ -51,7 +51,7 @@ export default function OwnerDashboard() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
+    const stored = sessionStorage.getItem('user');
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed.role !== 'turf_owner') { 

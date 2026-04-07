@@ -24,7 +24,9 @@ export default function Login() {
       
       if (response.ok) {
         // Save the user data to the browser's vault
-        localStorage.setItem('user', JSON.stringify(data));
+        // Clear migrating localStorage state to prevent legacy conflicts
+        localStorage.removeItem('user');
+        sessionStorage.setItem('user', JSON.stringify(data));
         
         // --- THIS IS THE NEW SMART ROUTING! ---
         if (data.role === 'turf_owner') {

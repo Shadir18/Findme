@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 
 export default function Navbar() {
   // Check the browser's vault to see if a user is logged in
-  const userString = localStorage.getItem('user');
+  const userString = sessionStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('user');
     window.location.href = '/';
   };
 

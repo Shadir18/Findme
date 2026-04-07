@@ -57,9 +57,28 @@ function ProgressBar({ count, capacity }) {
 
 // ── Location Cascade ───────────────────────────────────────────────────────────
 function LocationCascade({ value, onChange }) {
+  const [dynamicTowns, setDynamicTowns] = useState([]);
+
+  useEffect(() => {
+    if (value.district) {
+      fetch(`${API}/api/turfs?district=${encodeURIComponent(value.district)}`)
+        .then(r => r.json())
+        .then(data => {
+          const turfs = data.turfs || [];
+          const customTowns = turfs.map(t => t.address?.town).filter(Boolean);
+          setDynamicTowns([...new Set(customTowns)]);
+        })
+        .catch(() => setDynamicTowns([]));
+    } else {
+      setDynamicTowns([]);
+    }
+  }, [value.district]);
+
   const provinces = Object.keys(SL);
   const districts = value.province ? Object.keys(SL[value.province]) : [];
-  const towns = value.province && value.district ? SL[value.province][value.district] || [] : [];
+  const staticTowns = value.province && value.district ? SL[value.province][value.district] || [] : [];
+  const towns = [...new Set([...staticTowns, ...dynamicTowns])].sort();
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
@@ -365,7 +384,8 @@ function PreferencesTab({ user, onSaved }) {
     if(!prefs.loc.district){setMsg({ok:false,text:'Please select at least a District.'});return;}
     setSaving(true);setMsg(null);
     try{
-      const r=await fetch(`${API}/api/player/availability`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({player_id:user._id,sport:prefs.sport,area:prefs.loc.district,province:prefs.loc.province,district:prefs.loc.district,town:prefs.loc.town,preferred_days:prefs.days,preferred_time:prefs.time})});
+      const area = prefs.loc.town || prefs.loc.district;
+      const r=await fetch(`${API}/api/player/availability`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({player_id:user._id,sport:prefs.sport,area,province:prefs.loc.province,district:prefs.loc.district,town:prefs.loc.town,preferred_days:prefs.days,preferred_time:prefs.time})});
       if(r.ok){setMsg({ok:true,text:'Preferences saved! Finding your match…'});setTimeout(onSaved,1200);}
       else{const d=await r.json();setMsg({ok:false,text:d.error||'Error saving.'});}
     }catch{setMsg({ok:false,text:'Cannot reach server.'});}
@@ -427,31 +447,143 @@ function PreferencesTab({ user, onSaved }) {
 
 // ── Tab: Find Matches ──────────────────────────────────────────────────────────
 function FindMatchesTab({ user, onJoin, onPay, onTeam }) {
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fSport, setFS] = useState('');
-  const [fDist, setFD] = useState('');
+  const [loc, setLoc]               = useState({ province:'', district:'', town:'' });
+  const [availSports, setAvailSports] = useState([]); // sports with real venues in selected town
+  const [loadingSports, setLS]       = useState(false);
+  const [fSport, setFS]              = useState('');
+  const [groups, setGroups]          = useState([]);
+  const [loading, setLoading]        = useState(false);
+  const [searched, setSearched]      = useState(false);
 
-  const load = useCallback(async()=>{
-    setLoading(true);
-    try{const p=new URLSearchParams();if(fSport)p.append('sport',fSport);if(fDist)p.append('area',fDist);const r=await fetch(`${API}/api/matches/open?${p}`);const d=await r.json();setGroups(d.groups||[]);}catch{setGroups([]);}
+  // Step 1: When town (or district) is selected, fetch which sports actually exist there
+  useEffect(() => {
+    if (!loc.district) { setAvailSports([]); setFS(''); setGroups([]); setSearched(false); return; }
+    const fetchSports = async () => {
+      setLS(true); setFS(''); setGroups([]); setSearched(false);
+      try {
+        const p = new URLSearchParams({ district: loc.district });
+        if (loc.province) p.append('province', loc.province);
+        if (loc.town)     p.append('town', loc.town);
+        const r = await fetch(`${API}/api/turfs?${p}`);
+        const d = await r.json();
+        // Extract unique sports from all courts across all venues
+        const sports = [...new Set((d.turfs || []).flatMap(t => t.courts.map(c => c.sport)))].sort();
+        setAvailSports(sports);
+      } catch { setAvailSports([]); }
+      setLS(false);
+    };
+    fetchSports();
+  }, [loc.district, loc.town]);
+
+  // Step 2: Load open match groups filtered by location + sport
+  const load = useCallback(async () => {
+    if (!loc.district) return;
+    setLoading(true); setSearched(true);
+    try {
+      const p = new URLSearchParams();
+      p.append('area', loc.town || loc.district);
+      if (fSport) p.append('sport', fSport);
+      const r = await fetch(`${API}/api/matches/open?${p}`);
+      const d = await r.json();
+      setGroups(d.groups || []);
+    } catch { setGroups([]); }
     setLoading(false);
-  },[fSport,fDist]);
-  useEffect(()=>{load();},[load]);
+  }, [loc.district, loc.town, fSport]);
 
-  const allDistricts = [...new Set(Object.values(SL).flatMap(p=>Object.keys(p)))].sort();
+  useEffect(() => { if (loc.district) load(); }, [load]);
+
+  const sportIcons = {Futsal:'⚽',Football:'🏈','Indoor Cricket':'🏏',Badminton:'🏸',Basketball:'🏀',Tennis:'🎾'};
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="Open Matches" right={`${groups.length} group${groups.length!==1?'s':''} found`}/>
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-3 items-end">
-        <div><label className={lbl}>Sport</label><select className={sel.replace('w-full','')+' min-w-[140px]'} value={fSport} onChange={e=>setFS(e.target.value)}><option value="">All Sports</option>{SPORTS.map(s=><option key={s}>{s}</option>)}</select></div>
-        <div><label className={lbl}>District</label><select className={sel.replace('w-full','')+' min-w-[160px]'} value={fDist} onChange={e=>setFD(e.target.value)}><option value="">All Districts</option>{allDistricts.map(d=><option key={d}>{d}</option>)}</select></div>
-        <button onClick={load} className="px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition">Refresh</button>
+      <SectionHeader title="Find a Match" right={searched ? `${groups.length} group${groups.length!==1?'s':''} found` : 'Select your area to start'}/>
+
+      {/* Step 1 — Location */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <label className={lbl}>Your Location</label>
+        <LocationCascade value={loc} onChange={l => { setLoc(l); }} />
+        {!loc.district && (
+          <p className="mt-3 text-xs text-gray-400 font-medium">
+            Select at least a <span className="font-bold text-gray-600">District</span> to see available sports and matches in your area.
+          </p>
+        )}
       </div>
-      {loading?(<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{[...Array(4)].map((_,i)=><div key={i} className="h-40 bg-gray-100 rounded-xl animate-pulse"/>)}</div>)
-      :groups.length===0?(<div className="bg-white rounded-xl shadow-sm border border-gray-100 py-16 text-center"><p className="text-gray-400 text-sm font-semibold">No open matches found. Set preferences or change filters.</p></div>)
-      :(<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{groups.map(g=><MatchCard key={g._id} group={g} playerId={user._id} onJoin={onJoin} onPay={onPay} onTeam={onTeam} mine={false}/>)}</div>)}
+
+      {/* Step 2 — Sport filter (only shows sports with real venues in selected area) */}
+      {loc.district && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <label className={lbl}>
+              Sports Available {loc.town ? `in ${loc.town}` : `in ${loc.district}`}
+            </label>
+            {loadingSports && <span className="text-[10px] text-gray-400 animate-pulse">Checking venues…</span>}
+          </div>
+
+          {loadingSports ? (
+            <div className="flex gap-3">
+              {[...Array(4)].map((_,i) => <div key={i} className="h-20 w-20 bg-gray-100 rounded-xl animate-pulse"/>)}
+            </div>
+          ) : availSports.length === 0 ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-amber-700 text-sm font-semibold">No registered indoor venues found in this area.</p>
+              <p className="text-amber-600 text-xs mt-1">Try selecting a different district or town, or browse all matches below.</p>
+              <button onClick={() => { setFS(''); load(); }} className="mt-3 px-4 py-2 bg-gray-900 text-white text-xs font-black uppercase tracking-widest rounded-lg transition hover:bg-gray-800">Browse All Matches</button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {/* "All" button */}
+                <button
+                  onClick={() => setFS('')}
+                  className={`flex flex-col items-center gap-2 py-4 px-2 rounded-xl border-2 text-[10px] font-black uppercase tracking-wider transition ${!fSport ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}`}
+                >
+                  <span className="text-2xl">🏟️</span>
+                  <span>All</span>
+                </button>
+                {availSports.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setFS(s)}
+                    className={`flex flex-col items-center gap-2 py-4 px-2 rounded-xl border-2 text-[10px] font-black uppercase tracking-wider transition ${fSport===s ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:bg-white'}`}
+                  >
+                    <span className="text-2xl">{sportIcons[s]||'🏅'}</span>
+                    <span className="leading-tight text-center">{s}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 font-medium mt-3">
+                {availSports.length} sport{availSports.length!==1?'s':''} with active indoor venues in this area
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Step 3 — Match groups */}
+      {loc.district && (
+        <>
+          <div className="flex items-center justify-between">
+            <SectionHeader title="Open Groups" right={searched?`${groups.length} found`:''}/>
+            <button onClick={load} className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-black uppercase tracking-widest rounded-xl transition mb-4">Refresh</button>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[...Array(4)].map((_,i)=><div key={i} className="h-40 bg-gray-100 rounded-xl animate-pulse"/>)}
+            </div>
+          ) : !searched ? null
+          : groups.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 py-16 text-center">
+              <p className="text-gray-800 font-bold text-base">No open groups yet{fSport?` for ${fSport}`:''}</p>
+              <p className="text-gray-400 text-sm mt-1">Be the first — set your preferences and we'll create a group automatically.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {groups.map(g=><MatchCard key={g._id} group={g} playerId={user._id} onJoin={onJoin} onPay={onPay} onTeam={onTeam} mine={false}/>)}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -580,7 +712,7 @@ function MyActivityTab({ user, onPay, onTeam, refreshKey }) {
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function PlayersDashboard() {
   const navigate = useNavigate();
-  const userStr = localStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
 
   useEffect(()=>{if(!user||user.role!=='player')navigate('/login');},[]);
@@ -632,7 +764,7 @@ export default function PlayersDashboard() {
                   <span className="text-gray-700 text-xs font-semibold hidden sm:block">{user.name?.split(' ')[0]}</span>
                 </button>
               </div>
-              <button onClick={()=>{localStorage.removeItem('user');navigate('/');}} className="p-2 rounded-full hover:bg-red-50 transition text-gray-400 hover:text-red-500" title="Logout">
+              <button onClick={()=>{sessionStorage.removeItem('user');navigate('/');}} className="p-2 rounded-full hover:bg-red-50 transition text-gray-400 hover:text-red-500" title="Logout">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
               </button>
             </div>

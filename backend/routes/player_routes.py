@@ -38,6 +38,9 @@ def save_availability():
             "player_id": player_id,
             "sport":      data.get("sport"),
             "area":       data.get("area", "").strip(),
+            "province":   data.get("province", ""),
+            "district":   data.get("district", ""),
+            "town":       data.get("town", ""),
             "preferred_days":  data.get("preferred_days", []),
             "preferred_time":  data.get("preferred_time"),   # "morning" | "afternoon" | "evening"
             "updated_at": datetime.datetime.utcnow(),

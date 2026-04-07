@@ -14,10 +14,9 @@ const TypeIcon = ({ type }) => {
   return <div className="p-1.5 bg-green-50 text-green-600 rounded-lg shrink-0 mt-0.5"><CreditCard className="w-4 h-4" /></div>;
 };
 
-export default function OwnerHeader({ user, notifications, setNotifications, showNotifications, setShowNotifications, searchQuery, setSearchQuery }) {
+export default function OwnerHeader({ user, notifications = [], setNotifications, showNotifications, setShowNotifications, searchQuery, setSearchQuery, setActiveTab }) {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
-  const [notifList, setNotifList] = useState(MOCK_NOTIFS);
 
   const handleLogout = () => {
     sessionStorage.removeItem('user');
@@ -25,9 +24,16 @@ export default function OwnerHeader({ user, notifications, setNotifications, sho
   };
 
   const markAllRead = () => {
-    setNotifList(prev => prev.map(n => ({ ...n, unread: false })));
-    setNotifications(0);
+    // Optimistic UI clear
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
+
+  const handleNotifClick = (n) => {
+    if (setActiveTab) setActiveTab('bookings');
+    setShowNotifications(false);
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
@@ -53,8 +59,8 @@ export default function OwnerHeader({ user, notifications, setNotifications, sho
             <input
               type="text"
               placeholder="Search bookings..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              value={searchQuery || ''}
+              onChange={e => setSearchQuery && setSearchQuery(e.target.value)}
               className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg pl-9 pr-4 py-2 outline-none focus:border-blue-500 transition placeholder:text-gray-400"
             />
           </div>
@@ -67,9 +73,9 @@ export default function OwnerHeader({ user, notifications, setNotifications, sho
                 className="relative p-2 rounded-full hover:bg-gray-100 transition text-gray-500 hover:text-blue-600"
               >
                 <Bell className="w-5 h-5" />
-                {notifications > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] text-white font-bold flex items-center justify-center">
-                    {notifications}
+                    {unreadCount}
                   </span>
                 )}
               </button>
@@ -88,15 +94,20 @@ export default function OwnerHeader({ user, notifications, setNotifications, sho
                     </div>
                   </div>
                   <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
-                    {notifList.map(n => (
-                      <div key={n.id} className={`px-4 py-3 flex gap-3 items-start hover:bg-gray-50 transition ${n.unread ? '' : 'opacity-50'}`}>
-                        <TypeIcon type={n.type} />
+                    {notifications.length === 0 && (
+                      <p className="p-4 text-center text-xs text-gray-500">No recent notifications</p>
+                    )}
+                    {notifications.map(n => (
+                      <button key={n.id || n._id} onClick={() => handleNotifClick(n)} className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-gray-50 transition border-l-2 ${n.read ? 'border-transparent opacity-60' : 'border-blue-500 bg-blue-50/50'}`}>
+                        <TypeIcon type={n.type || 'booking'} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-700 text-xs leading-snug">{n.message}</p>
-                          <p className="text-gray-400 text-[10px] mt-1">{n.time}</p>
+                          <p className="text-gray-900 text-xs font-bold leading-snug">{n.title || 'Notification'}</p>
+                          <p className="text-gray-600 text-xs leading-snug mt-0.5">{n.message}</p>
+                          <p className="text-gray-400 text-[10px] mt-1">
+                            {n.created_at ? new Date(n.created_at).toLocaleDateString() : 'Just now'}
+                          </p>
                         </div>
-                        {n.unread && <div className="w-2 h-2 bg-blue-500 rounded-full mt-1 shrink-0"></div>}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>

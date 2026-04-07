@@ -17,30 +17,43 @@ export default function BookingsSchedule({
   const openTime = user?.timing?.open || '06:00';
   const closeTime = user?.timing?.close || '22:00';
   
-  const startHour = parseInt(openTime.split(':')[0], 10);
-  const endHour = parseInt(closeTime.split(':')[0], 10);
+  let startHour = parseInt(openTime.split(':')[0], 10);
+  let endHour = parseInt(closeTime.split(':')[0], 10);
+  
+  if (endHour <= startHour) {
+    if (endHour < 12 && startHour < 12) {
+      endHour += 12;
+    } else {
+      endHour += 24;
+    }
+  }
   
   // Generate ONLY the specific boxes for the hours this turf is actually open
   const hours = [];
   for (let i = startHour; i < endHour; i++) {
-    hours.push(i);
+    hours.push(i % 24);
   }
 
   const adjustDate = (days) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + days);
-    setSelectedDate(newDate);
+    // Parse using noon to avoid timezone shift on toISOString
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    // Format safely to YYYY-MM-DD
+    const newDateStr = d.toISOString().split('T')[0];
+    setSelectedDate(newDateStr);
   };
 
   const getDisplayDate = () => {
-    const today = new Date().toISOString().split('T')[0];
-    if (dateStr === today) return "Today";
+    const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    if (dateStr === todayStr) return "Today";
     
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    if (dateStr === tomorrow.toISOString().split('T')[0]) return "Tomorrow";
+    const d = new Date(todayStr + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    const tomorrowStr = d.toISOString().split('T')[0];
+    if (dateStr === tomorrowStr) return "Tomorrow";
 
-    return new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    // Format safe date
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -91,9 +104,12 @@ export default function BookingsSchedule({
           {/* Grid Body (Time Slots dynamically generated!) */}
           <div className="relative">
             {hours.map(hour => {
-              const timeString = `${hour.toString().padStart(2, '0')}:00`;
-              const displayHour = hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
-              const fullSlotString = `${timeString} - ${(hour + 1).toString().padStart(2, '0')}:00`;
+              const startH = hour;
+              const endH = (hour + 1) % 24;
+              const timeString = `${startH.toString().padStart(2, '0')}:00`;
+              const endTimeString = `${endH.toString().padStart(2, '0')}:00`;
+              const displayHour = startH > 12 ? `${startH - 12} PM` : startH === 12 ? '12 PM' : startH === 0 ? '12 AM' : `${startH} AM`;
+              const fullSlotString = `${timeString} - ${endTimeString}`;
 
               return (
                 <div key={hour} className="flex border-b border-gray-100 group">
@@ -128,8 +144,8 @@ export default function BookingsSchedule({
                             <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-1 truncate">
                               {slotBooking.status || 'Booked'}
                             </p>
-                            <p className="text-sm font-black truncate">{slotBooking.customerName || slotBooking.player_name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 mt-1 truncate font-mono">LKR {slotBooking.amount || slotBooking.price}</p>
+                            <p className="text-sm font-black truncate">{slotBooking.customerName || slotBooking.team || slotBooking.player_name}</p>
+                            <p className="text-[10px] font-bold text-gray-400 mt-1 truncate font-mono">LKR {slotBooking.amount || slotBooking.price || 0}</p>
                           </button>
                         ) : (
                           // AVAILABLE SLOT

@@ -107,10 +107,19 @@ def get_dashboard_data():
         "sportBreakdown": sport_breakdown
     }
 
+    # 4. Fetch Real Notifications
+    notifs_cursor = db.notifications.find({"owner_id": owner_id}).sort("created_at", -1).limit(10)
+    real_notifs = []
+    for n in notifs_cursor:
+        n['_id'] = str(n['_id'])
+        n['id'] = str(n['_id'])
+        real_notifs.append(n)
+
     return jsonify({
         "courts": courts,
         "bookings": bookings,
-        "analytics": analytics
+        "analytics": analytics,
+        "notifications": real_notifs
     })
 
 @owner_bp.route('/api/owner/courts/<court_id>/status', methods=['POST'])

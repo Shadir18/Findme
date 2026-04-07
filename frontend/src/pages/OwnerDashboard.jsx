@@ -23,7 +23,7 @@ export default function OwnerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   // UI State
-  const [notifications, setNotifications] = useState(3);
+  const [notifications, setNotifications] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showNotifications, setShowNotifications] = useState(false);
@@ -74,6 +74,7 @@ export default function OwnerDashboard() {
         setCourts(data.courts || []);
         setBookings(data.bookings || []);
         setAnalytics(data.analytics || null);
+        setNotifications(data.notifications || []);
       }
     } catch (err) {
       console.error("Failed to load dashboard data");

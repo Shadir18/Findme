@@ -404,7 +404,80 @@ def _push_notification(player_id, title, message):
     })
 
 
-# ── 10. Browse available turfs by location ────────────────────────────────────
+
+# ── 10. Find substitute players ───────────────────────────────────────────────
+@player_bp.route('/api/players/available', methods=['GET'])
+def get_available_players():
+    """
+    Query: district (required), town (optional), sport (optional)
+    Returns individual players who have set their preferences to this area and sport.
+    """
+    try:
+        district = request.args.get("district", "").strip()
+        town     = request.args.get("town", "").strip()
+        sport    = request.args.get("sport", "").strip()
+
+        query = {}
+        if district:
+            query["district"] = district
+        if town:
+            query["town"] = town
+        if sport:
+            query["sport"] = sport
+
+        schedules = list(db.availability_schedules.find(query))
+        
+        results = []
+        for s in schedules:
+            pid = str(s["player_id"])
+            user = db.users.find_one({"_id": ObjectId(pid), "role": "player"})
+            if not user:
+                continue
+                
+            results.append({
+                "player_id": pid,
+                "name": user.get("name", "Player"),
+                "sport": s.get("sport"),
+                "preferred_days": s.get("preferred_days", []),
+                "preferred_time": s.get("preferred_time", "Anytime"),
+                "area": s.get("area", "")
+            })
+
+        return jsonify({"players": results}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── 11. Send a direct invite to a player ──────────────────────────────────────
+@player_bp.route('/api/players/invite', methods=['POST'])
+def invite_player():
+    """
+    Body: { from_player_id, to_player_id, sport, area, message }
+    """
+    try:
+        data = request.json
+        from_id = data.get("from_player_id")
+        to_id   = data.get("to_player_id")
+        sport   = data.get("sport", "a sport")
+        area    = data.get("area", "your area")
+        
+        if not from_id or not to_id:
+            return jsonify({"error": "Sender and receiver IDs required."}), 400
+
+        sender = db.users.find_one({"_id": ObjectId(from_id)})
+        phone  = sender.get("phone", "N/A") if sender else "N/A"
+        name   = sender.get("name", "A player") if sender else "A player"
+
+        notif_msg = f"{name} is looking for a ringer for a {sport} match in {area}! Call them at {phone} to join their team."
+        
+        _push_notification(to_id, "Substitution Request! 🏅", notif_msg)
+
+        return jsonify({"message": "Invite sent successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── 12. Browse available turfs by location ────────────────────────────────────
 @player_bp.route('/api/turfs', methods=['GET'])
 def get_turfs():
     """
@@ -519,6 +592,16 @@ def player_book_court():
         # Notify player
         _push_notification(player_id, "Booking Submitted",
                            f"Your booking at {data.get('indoor_name')} on {data.get('date')} ({data.get('time_slot')}) is pending confirmation.")
+
+        # Notify Owner
+        db.notifications.insert_one({
+            "owner_id": owner_id,
+            "title": "New Web Booking! 📅",
+            "message": f"{player_name} booked {data.get('court_name', 'a court')} on {data.get('date')} at {data.get('time_slot')}.",
+            "read": False,
+            "type": "booking",
+            "created_at": datetime.datetime.utcnow()
+        })
 
         return jsonify({"message": "Booking created!", "booking": new_booking}), 201
     except Exception as e:

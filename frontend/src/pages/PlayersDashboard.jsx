@@ -219,10 +219,25 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   const [card, setCard] = useState({card_number:'',card_name:'',expiry:'',cvv:''});
   const [err, setErr] = useState('');
 
-  const open = parseInt((turf?.timing?.open||'06:00').split(':')[0]);
-  const close = parseInt((turf?.timing?.close||'23:00').split(':')[0]);
+  let open = parseInt((turf?.timing?.open||'06:00').split(':')[0]);
+  let close = parseInt((turf?.timing?.close||'23:00').split(':')[0]);
+  
+  // Robust overnight & 12h resolution
+  if (close <= open) {
+    if (close < 12 && open < 12) {
+      close += 12; // Example: open 06:00, close 05:00 (meaning 5 PM)
+    } else {
+      close += 24; // Overnight: open 22:00, close 06:00
+    }
+  }
+
   const slots = [];
-  for(let h=open;h<close;h++) slots.push(`${String(h).padStart(2,'0')}:00 - ${String(h+1).padStart(2,'0')}:00`);
+  for (let h = open; h < close; h++) {
+    let startH = h % 24;
+    let endH = (h + 1) % 24;
+    // To ensure "24:00" doesn't appear, use 00:00 for midnight
+    slots.push(`${String(startH).padStart(2,'0')}:00 - ${String(endH).padStart(2,'0')}:00`);
+  }
   const rate = Number(turf?.pricing?.weekday?.day||turf?.pricing?.standard||1500);
 
   const fmt = (v,f) => {
@@ -588,6 +603,93 @@ function FindMatchesTab({ user, onJoin, onPay, onTeam }) {
   );
 }
 
+// ── Tab: Find Substitutes (Ringers) ────────────────────────────────────────────
+function FindSubstitutesTab({ user }) {
+  const [loc, setLoc] = useState({province:'',district:'',town:''});
+  const [sport, setSport] = useState('');
+  const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState({}); // track invitations
+
+  const search = async()=>{
+    if(!loc.district){alert('Please select a District.');return;}
+    setLoading(true);setSearched(true);
+    try{
+      const p=new URLSearchParams({district:loc.district});
+      if(loc.town) p.append('town',loc.town);
+      if(sport) p.append('sport',sport);
+      const r=await fetch(`${API}/api/players/available?${p}`);
+      const d=await r.json();
+      // Filter out self
+      const others = (d.players||[]).filter(p => p.player_id !== user._id);
+      setPlayers(others);
+    } catch { setPlayers([]); }
+    setLoading(false);
+  };
+
+  const invitePlayer = async (pid) => {
+    setInviteStatus(s => ({...s, [pid]: 'Sending...'}));
+    try {
+      const r = await fetch(`${API}/api/players/invite`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          from_player_id: user._id,
+          to_player_id: pid,
+          sport: sport || 'a sport',
+          area: loc.town || loc.district || 'your area'
+        })
+      });
+      if(r.ok) setInviteStatus(s => ({...s, [pid]: 'Invited ✓'}));
+      else setInviteStatus(s => ({...s, [pid]: 'Failed'}));
+    } catch {
+      setInviteStatus(s => ({...s, [pid]: 'Error'}));
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="Find Substitutes" right="Find players to join your game"/>
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-5">
+        <p className="text-gray-500 text-sm font-medium mb-2">Short on players? Search for individuals in your area who are looking for a game.</p>
+        <LocationCascade value={loc} onChange={setLoc}/>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          <div><label className={lbl}>Sport (Optional)</label><select className={sel} value={sport} onChange={e=>setSport(e.target.value)}><option value="">All Sports</option>{SPORTS.map(s=><option key={s}>{s}</option>)}</select></div>
+          <button onClick={search} disabled={loading} className="py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow transition active:scale-95">{loading?'Searching…':'Find Players'}</button>
+        </div>
+      </div>
+
+      {searched&&!loading&&players.length===0&&(
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 py-16 text-center"><p className="text-gray-400 text-sm font-semibold">No available players found in this area.</p></div>
+      )}
+
+      {players.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {players.map(p=>(
+            <div key={p.player_id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between hover:border-blue-300 transition">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-800 to-gray-600 flex items-center justify-center text-white text-lg font-black shrink-0">{(p.name||'P')[0].toUpperCase()}</div>
+                <div>
+                  <h4 className="text-gray-900 font-bold text-sm">{p.name}</h4>
+                  <p className="text-gray-500 text-xs font-medium">{p.sport} · {p.area}</p>
+                  <p className="text-gray-400 text-[10px] uppercase font-bold mt-1 tracking-wider">Prefers: {p.preferred_time}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => invitePlayer(p.player_id)}
+                disabled={!!inviteStatus[p.player_id]}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest shadow transition active:scale-95 ${inviteStatus[p.player_id] ? 'bg-green-50 text-green-700 border border-green-200 cursor-default' : 'bg-gray-900 hover:bg-gray-800 text-white'}`}
+              >
+                {inviteStatus[p.player_id] || 'Invite'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tab: Book Indoor ───────────────────────────────────────────────────────────
 function BookIndoorTab({ user, onDone }) {
   const [loc, setLoc] = useState({province:'',district:'',town:''});
@@ -739,7 +841,13 @@ export default function PlayersDashboard() {
 
   if(!user)return null;
 
-  const TABS=[{id:'preferences',label:"Preferences"},{id:'find-matches',label:'Find Match'},{id:'book-indoor',label:'Book Indoor'},{id:'my-activity',label:'My Activity'}];
+  const TABS=[
+    {id:'preferences',label:"Preferences"},
+    {id:'find-matches',label:'Find Match'},
+    {id:'find-substitutes',label:'Find Substitutes'},
+    {id:'book-indoor',label:'Book Indoor'},
+    {id:'my-activity',label:'My Activity'}
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-800 pb-10">
@@ -784,10 +892,11 @@ export default function PlayersDashboard() {
       </div>
 
       <main className="max-w-screen-xl mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-12">
-        {tab==='preferences'  && <PreferencesTab user={user} onSaved={()=>{reload();setTab('my-activity');}}/>}
-        {tab==='find-matches' && <FindMatchesTab user={user} onJoin={handleJoin} onPay={setPayGroup} onTeam={setTeamGroup}/>}
-        {tab==='book-indoor'  && <BookIndoorTab  user={user} onDone={()=>{reload();setTab('my-activity');}}/>}
-        {tab==='my-activity'  && <MyActivityTab  user={user} onPay={setPayGroup} onTeam={setTeamGroup} refreshKey={refreshKey}/>}
+        {tab==='preferences'      && <PreferencesTab user={user} onSaved={()=>{reload();setTab('my-activity');}}/>}
+        {tab==='find-matches'     && <FindMatchesTab user={user} onJoin={handleJoin} onPay={setPayGroup} onTeam={setTeamGroup}/>}
+        {tab==='find-substitutes' && <FindSubstitutesTab user={user} />}
+        {tab==='book-indoor'      && <BookIndoorTab  user={user} onDone={()=>{reload();setTab('my-activity');}}/>}
+        {tab==='my-activity'      && <MyActivityTab  user={user} onPay={setPayGroup} onTeam={setTeamGroup} refreshKey={refreshKey}/>}
       </main>
 
       {payGroup  && <PayModal group={payGroup} playerId={user._id} onClose={()=>setPayGroup(null)} onSuccess={()=>{setPayGroup(null);reload();loadNotifs();}}/>}

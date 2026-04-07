@@ -95,7 +95,8 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, set
   const handleBook = () => {
     if (selectedCells.length === 0) return;
     const sorted = selectedCells.map(h => parseInt(h)).sort((a, b) => a - b);
-    const timeSlot = `${String(sorted[0]).padStart(2, '0')}:00 - ${String(sorted[sorted.length - 1] + 1).padStart(2, '0')}:00`;
+    const endH = (sorted[sorted.length - 1] + 1) % 24;
+    const timeSlot = `${String(sorted[0]).padStart(2, '0')}:00 - ${String(endH).padStart(2, '0')}:00`;
     setShowAddBooking({ date, timeSlot, courtName: selectedCourt.name, recurrence });
     onClose();
   };
@@ -113,7 +114,8 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, set
   const selectedPreview = (() => {
     if (selectedCells.length === 0) return null;
     const sorted = selectedCells.map(h => parseInt(h)).sort((a, b) => a - b);
-    return `${String(sorted[0]).padStart(2, '0')}:00 – ${String(sorted[sorted.length - 1] + 1).padStart(2, '0')}:00`;
+    const endH = (sorted[sorted.length - 1] + 1) % 24;
+    return `${String(sorted[0]).padStart(2, '0')}:00 – ${String(endH).padStart(2, '0')}:00`;
   })();
 
   return (

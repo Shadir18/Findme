@@ -20,12 +20,10 @@ export default function BookingsSchedule({
   let startHour = parseInt(openTime.split(':')[0], 10);
   let endHour = parseInt(closeTime.split(':')[0], 10);
   
+  if (endHour === 0) endHour = 24;
   if (endHour <= startHour) {
-    if (endHour < 12 && startHour < 12) {
-      endHour += 12;
-    } else {
-      endHour += 24;
-    }
+    if (endHour < 12) endHour += 12;
+    if (endHour <= startHour) endHour += 12;
   }
   
   // Generate ONLY the specific boxes for the hours this turf is actually open

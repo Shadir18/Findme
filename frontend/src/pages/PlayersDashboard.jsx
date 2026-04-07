@@ -219,20 +219,17 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   const [card, setCard] = useState({card_number:'',card_name:'',expiry:'',cvv:''});
   const [err, setErr] = useState('');
 
-  let open = parseInt((turf?.timing?.open||'06:00').split(':')[0]);
-  let close = parseInt((turf?.timing?.close||'23:00').split(':')[0]);
+  let startHour = parseInt((turf?.timing?.open||'06:00').split(':')[0], 10);
+  let endHour = parseInt((turf?.timing?.close||'23:00').split(':')[0], 10);
   
-  // Robust overnight & 12h resolution
-  if (close <= open) {
-    if (close < 12 && open < 12) {
-      close += 12; // Example: open 06:00, close 05:00 (meaning 5 PM)
-    } else {
-      close += 24; // Overnight: open 22:00, close 06:00
-    }
+  if (endHour === 0) endHour = 24;
+  if (endHour <= startHour) {
+    if (endHour < 12) endHour += 12;
+    if (endHour <= startHour) endHour += 12;
   }
 
   const slots = [];
-  for (let h = open; h < close; h++) {
+  for (let h = startHour; h < endHour; h++) {
     let startH = h % 24;
     let endH = (h + 1) % 24;
     // To ensure "24:00" doesn't appear, use 00:00 for midnight

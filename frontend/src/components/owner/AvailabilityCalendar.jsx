@@ -11,7 +11,7 @@ const LEVEL_STYLES = {
 };
 
 // ── Hourly Booking Grid Modal ────────────────────────────────────────────────
-function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, setDetailModal }) {
+function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, setDetailModal, user }) {
   // ALL hooks MUST come before any conditional return (React Rules of Hooks)
   const [selectedCourt, setSelectedCourt] = useState(
     courts.length > 0 ? courts[0] : null
@@ -37,10 +37,21 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, set
     );
   }
 
-  // Build hour slots 06:00 → 23:00
+  // Build dynamic hour slots
+  const openTime = user?.timing?.open || '06:00';
+  const closeTime = user?.timing?.close || '22:00';
+  let startH = parseInt(openTime.split(':')[0], 10);
+  let endH = parseInt(closeTime.split(':')[0], 10);
+  
+  if (endH === 0) endH = 24;
+  if (endH <= startH) {
+    if (endH < 12) endH += 12;
+    if (endH <= startH) endH += 12;
+  }
+
   const hours = [];
-  for (let h = 6; h <= 23; h++) {
-    hours.push(`${String(h).padStart(2, '0')}:00`);
+  for (let h = startH; h < endH; h++) {
+    hours.push(`${String(h % 24).padStart(2, '0')}:00`);
   }
 
   // Non-cancelled bookings for this date + court
@@ -246,7 +257,7 @@ function CalendarModal({ date, courts, bookings, onClose, setShowAddBooking, set
 }
 
 // ── Month-level Calendar ─────────────────────────────────────────────────────
-export default function AvailabilityCalendar({ bookings = [], courts = [], setShowAddBooking, setDetailModal }) {
+export default function AvailabilityCalendar({ bookings = [], courts = [], setShowAddBooking, setDetailModal, user }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -346,6 +357,7 @@ export default function AvailabilityCalendar({ bookings = [], courts = [], setSh
           bookings={bookings}
           setShowAddBooking={setShowAddBooking}
           setDetailModal={setDetailModal}
+          user={user}
           onClose={() => setSelectedDay(null)}
         />,
         document.body

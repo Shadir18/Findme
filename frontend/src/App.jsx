@@ -13,6 +13,7 @@ import MatchGrid from './components/MatchGrid';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import OwnerDashboard from './pages/OwnerDashboard';
+import PlayersDashboard from './pages/PlayersDashboard';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +41,7 @@ function App() {
       <Routes>
         {/* ── Standalone routes – own full-screen layouts ─────────────────── */}
         <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+        <Route path="/dashboard" element={<PlayersDashboard />} />
 
         {/* ── Standard layout routes – shared Navbar / Footer ─────────────── */}
         <Route path="/*" element={

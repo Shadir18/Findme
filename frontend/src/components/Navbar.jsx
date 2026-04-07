@@ -6,8 +6,8 @@ export default function Navbar() {
   const user = userString ? JSON.parse(userString) : null;
 
   const handleLogout = () => {
-    localStorage.removeItem('user'); // Delete the saved login
-    window.location.href = '/'; // Reload the page
+    localStorage.removeItem('user');
+    window.location.href = '/';
   };
 
   return (
@@ -18,9 +18,17 @@ export default function Navbar() {
         <Link to="/" className="hover:text-blue-600 transition">Home</Link>
         <Link to="/find-match" className="hover:text-blue-600 transition">Find a Match</Link>
         
-        {/* If user is logged in, show their name and Logout. Otherwise, show Login/Signup */}
         {user ? (
           <div className="flex items-center space-x-4 border-l pl-6 ml-2 border-gray-300">
+            {/* Show Dashboard link only for players */}
+            {user.role === 'player' && (
+              <Link
+                to="/dashboard"
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-bold text-sm"
+              >
+                My Dashboard
+              </Link>
+            )}
             <span className="text-blue-600 font-bold">Hi, {user.name}</span>
             <button onClick={handleLogout} className="text-red-500 hover:text-red-700 transition">Logout</button>
           </div>

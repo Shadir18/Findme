@@ -115,11 +115,18 @@ def get_dashboard_data():
         n['id'] = str(n['_id'])
         real_notifs.append(n)
 
+    # Fetch latest user data to ensure frontend has up-to-date profile info
+    user_latest = db.users.find_one({"_id": ObjectId(owner_id)})
+    if user_latest:
+        user_latest['_id'] = str(user_latest['_id'])
+        if 'password' in user_latest: del user_latest['password']
+
     return jsonify({
         "courts": courts,
         "bookings": bookings,
         "analytics": analytics,
-        "notifications": real_notifs
+        "notifications": real_notifs,
+        "user": user_latest
     })
 
 @owner_bp.route('/api/owner/courts/<court_id>/status', methods=['POST'])
@@ -202,3 +209,32 @@ def update_booking_status(booking_id):
         
     db.bookings.update_one({"_id": ObjectId(booking_id)}, {"$set": {"status": status}})
     return jsonify({"success": True, "status": status})
+
+@owner_bp.route('/api/owner/profile', methods=['PUT'])
+def update_owner_profile():
+    try:
+        data = request.json
+        owner_id = data.get('owner_id')
+        if not owner_id:
+            return jsonify({"error": "Owner ID missing"}), 400
+
+        # Build update fields (don't allow sensitive field overwrites without validation)
+        update_fields = {}
+        allowed = ['name', 'phone', 'email', 'indoor_name', 'province', 'district', 'city', 'latitude', 'longitude']
+        for key in allowed:
+            if key in data:
+                update_fields[key] = data[key]
+
+        if not update_fields:
+            return jsonify({"error": "No update fields provided"}), 400
+
+        db.users.update_one({"_id": ObjectId(owner_id)}, {"$set": update_fields})
+        
+        # Get updated user to return
+        updated_user = db.users.find_one({"_id": ObjectId(owner_id)})
+        updated_user['_id'] = str(updated_user['_id'])
+        if 'password' in updated_user: del updated_user['password']
+
+        return jsonify({"success": True, "user": updated_user})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

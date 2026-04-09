@@ -637,3 +637,63 @@ def get_busy_slots(court_id):
         return jsonify({'busy': list(set(busy))}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+@player_bp.route('/api/player/profile', methods=['GET'])
+def get_player_profile():
+    try:
+        player_id = request.args.get('player_id')
+        if not player_id:
+            return jsonify({"error": "Player ID missing"}), 400
+        
+        user = db.users.find_one({"_id": ObjectId(player_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+            
+        user['_id'] = str(user['_id'])
+        if 'password' in user: del user['password']
+        
+        # Ensure phone exists if mobile is there
+        if 'phone' not in user and 'mobile' in user:
+            user['phone'] = user['mobile']
+
+        return jsonify({"success": True, "user": user})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@player_bp.route('/api/player/profile', methods=['PUT'])
+def update_player_profile():
+    try:
+        data = request.json
+        player_id = data.get('player_id')
+        if not player_id:
+            return jsonify({"error": "Player ID missing"}), 400
+
+        # Build update fields
+        update_fields = {}
+        allowed = ['name', 'phone', 'email', 'province', 'district', 'city', 'profile_picture']
+        for key in allowed:
+            if key in data:
+                update_fields[key] = data[key]
+
+        # Also sync to 'address' object for compatibility
+        if any(k in data for k in ['province', 'district', 'city']):
+            update_fields['address'] = {
+                'province': data.get('province') or '',
+                'district': data.get('district') or '',
+                'town': data.get('city') or ''   # Using town for compatibility with existing address structure
+            }
+            # For players, area is often stored at root
+            update_fields['area'] = data.get('city') or ''
+
+        if not update_fields:
+            return jsonify({"error": "No update fields provided"}), 400
+
+        db.users.update_one({"_id": ObjectId(player_id)}, {"$set": update_fields})
+        
+        # Get updated user
+        user = db.users.find_one({"_id": ObjectId(player_id)})
+        user['_id'] = str(user['_id'])
+        if 'password' in user: del user['password']
+
+        return jsonify({"success": True, "user": user})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -191,3 +191,112 @@ def login():
             return jsonify({"error": "Invalid email or password."}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@auth_bp.route('/api/auth/forgot-password-request', methods=['POST'])
+def forgot_password_request():
+    try:
+        data = request.json
+        email = data.get("email") # Could be email or phone
+        
+        # Allow finding by email or phone
+        user = db.users.find_one({
+            "$or": [
+                {"email": email},
+                {"phone": email}
+            ]
+        })
+        
+        if not user:
+            return jsonify({"error": "No account found with this email/phone."}), 404
+
+        real_email = user.get("email")
+        otp = str(random.randint(100000, 999999))
+        
+        pending_otps[f"reset_{real_email}"] = {
+            "otp": otp,
+            "expires_at": datetime.now() + timedelta(minutes=10)
+        }
+
+        # Send Reset Email (Styled like Google Security)
+        try:
+            msg = Message(
+                subject="FINDME - Account Recovery Code",
+                recipients=[real_email],
+                html=f"""
+                <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 40px auto; padding: 40px; border: 1px solid #e5e7eb; border-radius: 24px;">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <span style="font-size: 24px; font-weight: 900; color: #2563eb; font-style: italic; letter-spacing: -1px;">FINDME</span>
+                    </div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 16px; text-align: center;">Account Recovery</h2>
+                    <p style="font-size: 14px; color: #4b5563; line-height: 24px; text-align: center; margin-bottom: 32px;">
+                        Use this verification code to reset your password. This code will expire in 10 minutes.
+                    </p>
+                    <div style="background: #eff6ff; padding: 24px; text-align: center; border-radius: 16px; margin-bottom: 32px; border: 1px solid #dbeafe;">
+                        <span style="font-size: 36px; font-weight: 800; letter-spacing: 12px; color: #1d4ed8; font-family: monospace;">{otp}</span>
+                    </div>
+                </div>
+                """
+            )
+            mail.send(msg)
+        except Exception:
+            pass # Fallback to mobile if SMS is configured
+
+        # Send SMS too if possible
+        try:
+            phone = user.get('phone', '')
+            if phone:
+                if phone.startswith('0'): phone = '94' + phone[1:]
+                sms_payload = {
+                    'user_id': current_app.config.get('NOTIFY_USER_ID'),
+                    'api_key': current_app.config.get('NOTIFY_API_KEY'),
+                    'sender_id': current_app.config.get('NOTIFY_SENDER_ID'),
+                    'to': phone,
+                    'message': f"FINDME Recovery Code: {otp}"
+                }
+                requests.get('https://app.notify.lk/api/v1/send', params=sms_payload)
+        except Exception:
+            pass
+
+        print(f"\n[PASSWORD RESET CODE] TO: {real_email}")
+        print(f"[CODE]: {otp}\n")
+
+        return jsonify({
+            "message": "Recovery code sent!",
+            "email": real_email,
+            "debug_otp": otp # Remove for prod
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@auth_bp.route('/api/auth/reset-password-final', methods=['POST'])
+def reset_password_final():
+    try:
+        data = request.json
+        email = data.get("email")
+        otp = data.get("otp")
+        new_password = data.get("new_password")
+
+        entry = pending_otps.get(f"reset_{email}")
+        if not entry or entry["otp"] != otp:
+            return jsonify({"error": "Invalid or expired OTP."}), 400
+        
+        if datetime.now() > entry["expires_at"]:
+            return jsonify({"error": "OTP has expired."}), 400
+
+        user = db.users.find_one({"email": email})
+        if not user:
+            return jsonify({"error": "User not found."}), 404
+
+        # SECURITY: New password cannot be the same as the old password
+        if check_password_hash(user["password"], new_password):
+            return jsonify({"error": "Your new password cannot be same as older password."}), 400
+
+        hashed_password = generate_password_hash(new_password)
+        db.users.update_one({"email": email}, {"$set": {"password": hashed_password}})
+        
+        if f"reset_{email}" in pending_otps:
+            del pending_otps[f"reset_{email}"]
+
+        return jsonify({"success": True, "message": "Password updated successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

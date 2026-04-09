@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PlayerProfile from '../components/player/PlayerProfile';
 
 const API = 'http://127.0.0.1:5000';
 
@@ -880,12 +881,37 @@ export default function PlayersDashboard() {
 
   useEffect(()=>{if(!user||user.role!=='player')navigate('/login');},[]);
 
-  const [tab, setTab] = useState('preferences');
+  const [tab, setTab] = useState(sessionStorage.getItem('player_active_tab') || 'preferences');
+
+  useEffect(() => {
+    sessionStorage.setItem('player_active_tab', tab);
+  }, [tab]);
   const [notifications, setNotifs] = useState([]);
   const [payGroup, setPayGroup] = useState(null);
   const [teamGroup, setTeamGroup] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const reload = ()=>setRefreshKey(k=>k+1);
+
+  // Synchronize latest user data from DB
+  useEffect(() => {
+    const fetchLatestUser = async () => {
+      if (!user?._id) return;
+      try {
+        const r = await fetch(`${API}/api/player/profile?player_id=${user._id}`);
+        if (r.ok) {
+          const d = await r.json();
+          if (d.user) {
+            sessionStorage.setItem('user', JSON.stringify(d.user));
+            // We don't necessarily need to trigger a full state update here if the components 
+            // react to the prop change or if we do a small refresh
+          }
+        }
+      } catch (err) {
+        console.error("Player data sync failed", err);
+      }
+    };
+    fetchLatestUser();
+  }, [user?._id]);
 
   const loadNotifs = useCallback(async()=>{
     if(!user?._id)return;
@@ -907,7 +933,8 @@ export default function PlayersDashboard() {
     {id:'find-matches',label:'Find Match'},
     {id:'find-substitutes',label:'Find Substitutes'},
     {id:'book-indoor',label:'Book Indoor'},
-    {id:'my-activity',label:'My Activity'}
+    {id:'my-activity',label:'My Activity'},
+    {id:'profile',label:'My Profile'}
   ];
 
   return (
@@ -928,9 +955,13 @@ export default function PlayersDashboard() {
             <div className="flex items-center gap-2">
               <NotifBell notifications={notifications} onMarkRead={markRead}/>
               <div className="relative">
-                <button onClick={()=>navigate('/')} className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5 transition">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-xs">{user.name?.[0]||'P'}</div>
-                  <span className="text-gray-700 text-xs font-semibold hidden sm:block">{user.name?.split(' ')[0]}</span>
+                <button onClick={()=>setTab('profile')} className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-1.5 py-1.5 transition">
+                  {user.profile_picture ? (
+                    <img src={user.profile_picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover border border-blue-200 shadow-sm" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-[10px]">{user.name?.[0]||'P'}</div>
+                  )}
+                  <span className="text-gray-700 text-xs font-bold px-2 hidden sm:block">{user.name?.split(' ')[0]}</span>
                 </button>
               </div>
               <button onClick={()=>{sessionStorage.removeItem('user');navigate('/');}} className="p-2 rounded-full hover:bg-red-50 transition text-gray-400 hover:text-red-500" title="Logout">
@@ -958,6 +989,7 @@ export default function PlayersDashboard() {
         {tab==='find-substitutes' && <FindSubstitutesTab user={user} />}
         {tab==='book-indoor'      && <BookIndoorTab  user={user} onDone={()=>{reload();setTab('my-activity');}}/>}
         {tab==='my-activity'      && <MyActivityTab  user={user} onPay={setPayGroup} onTeam={setTeamGroup} refreshKey={refreshKey}/>}
+        {tab==='profile'          && <PlayerProfile  user={user} onUpdate={(u)=>{ sessionStorage.setItem('user', JSON.stringify(u)); window.location.reload(); }}/>}
       </main>
 
       {payGroup  && <PayModal group={payGroup} playerId={user._id} onClose={()=>setPayGroup(null)} onSuccess={()=>{setPayGroup(null);reload();loadNotifs();}}/>}

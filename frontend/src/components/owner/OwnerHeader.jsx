@@ -169,11 +169,11 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
                     <p className="text-gray-500 text-xs">{user?.email || 'owner@findme.lk'}</p>
                   </div>
                   <div className="py-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm transition">
-                      <User className="w-4 h-4" /> Profile
+                    <button onClick={() => { setActiveTab('profile'); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm transition">
+                      <User className="w-4 h-4" /> My Profile
                     </button>
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm transition">
-                      <Settings className="w-4 h-4" /> Settings
+                    <button onClick={() => { setActiveTab('profile'); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm transition">
+                      <Settings className="w-4 h-4" /> Facility Settings
                     </button>
                     <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 text-sm transition font-medium">
                       <LogOut className="w-4 h-4" /> Logout

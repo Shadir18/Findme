@@ -14,6 +14,7 @@ import Signup from './pages/Signup';
 import Login from './pages/Login';
 import OwnerDashboard from './pages/OwnerDashboard';
 import PlayersDashboard from './pages/PlayersDashboard';
+import ForgotPassword from './components/auth/ForgotPassword';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +60,7 @@ function App() {
                 <Route path="/about" element={<div className="p-20 text-center text-2xl">About Page Content (Coming Soon)</div>} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="*" element={<Home />} />
               </Routes>
             </main>

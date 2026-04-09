@@ -47,7 +47,7 @@ const sriLankaData = {
   }
 };
 
-const sportsList = ["Football", "Cricket", "Badminton", "Basketball", "Tennis", "Futsal"];
+const sportsList = ["Cricket", "Badminton", "Basketball", "Tennis", "Futsal"];
 
 export default function Signup() {
   const navigate = useNavigate();

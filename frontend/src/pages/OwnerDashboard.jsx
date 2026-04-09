@@ -9,11 +9,16 @@ import RecentBookings from '../components/owner/RecentBookings';
 import AnalyticsSection from '../components/owner/AnalyticsSection';
 import QuickActions from '../components/owner/QuickActions';
 import OwnerBottomNav from '../components/owner/OwnerBottomNav';
+import ProfileSection from '../components/owner/ProfileSection';
 
 export default function OwnerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('bookings'); 
+  const [activeTab, setActiveTab] = useState(sessionStorage.getItem('owner_active_tab') || 'bookings'); 
+
+  useEffect(() => {
+    sessionStorage.setItem('owner_active_tab', activeTab);
+  }, [activeTab]);
   const [bookingFilter, setBookingFilter] = useState('today');
   
   // Real State from Backend
@@ -75,6 +80,10 @@ export default function OwnerDashboard() {
         setBookings(data.bookings || []);
         setAnalytics(data.analytics || null);
         setNotifications(data.notifications || []);
+        if (data.user) {
+          setUser(data.user);
+          sessionStorage.setItem('user', JSON.stringify(data.user));
+        }
       }
     } catch (err) {
       console.error("Failed to load dashboard data");
@@ -205,6 +214,7 @@ export default function OwnerDashboard() {
       case 'bookings':   return <BookingsSchedule {...sharedProps} standalone />; 
       case 'calendar':   return <AvailabilityCalendar {...sharedProps} />;
       case 'analytics':  return <AnalyticsSection {...sharedProps} />;
+      case 'profile':    return <ProfileSection {...sharedProps} />;
       default:
         return (
           <div className="space-y-6 animate-fadeIn">

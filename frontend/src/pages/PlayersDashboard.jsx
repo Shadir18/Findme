@@ -387,7 +387,16 @@ function MatchCard({ group, playerId, onJoin, onPay, onTeam, mine }) {
 
 // ── Tab: Preferences ───────────────────────────────────────────────────────────
 function PreferencesTab({ user, onSaved }) {
-  const [prefs, setPrefs] = useState({sport:'Futsal',loc:{province:'',district:'',town:''},days:['Sat','Sun'],time:'evening'});
+  const [prefs, setPrefs] = useState({
+    sport: 'Futsal',
+    loc: {
+      province: user?.address?.province || '',
+      district: user?.address?.district || '',
+      town: user?.address?.town || ''
+    },
+    days: ['Sat', 'Sun'],
+    time: 'evening'
+  });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const sportIcons = {Futsal:'⚽',Football:'🏈','Indoor Cricket':'🏏',Badminton:'🏸',Basketball:'🏀',Tennis:'🎾'};
@@ -459,7 +468,11 @@ function PreferencesTab({ user, onSaved }) {
 
 // ── Tab: Find Matches ──────────────────────────────────────────────────────────
 function FindMatchesTab({ user, onJoin, onPay, onTeam }) {
-  const [loc, setLoc]               = useState({ province:'', district:'', town:'' });
+  const [loc, setLoc]               = useState({
+    province: user?.address?.province || '',
+    district: user?.address?.district || '',
+    town: user?.address?.town || ''
+  });
   const [availSports, setAvailSports] = useState([]); // sports with real venues in selected town
   const [loadingSports, setLS]       = useState(false);
   const [fSport, setFS]              = useState('');
@@ -602,28 +615,33 @@ function FindMatchesTab({ user, onJoin, onPay, onTeam }) {
 
 // ── Tab: Find Substitutes (Ringers) ────────────────────────────────────────────
 function FindSubstitutesTab({ user }) {
-  const [loc, setLoc] = useState({province:'',district:'',town:''});
+  const [loc, setLoc] = useState({
+    province: user?.address?.province || '',
+    district: user?.address?.district || '',
+    town: user?.address?.town || ''
+  });
   const [sport, setSport] = useState('');
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [inviteStatus, setInviteStatus] = useState({}); // track invitations
 
-  const search = async()=>{
-    if(!loc.district){alert('Please select a District.');return;}
-    setLoading(true);setSearched(true);
-    try{
-      const p=new URLSearchParams({district:loc.district});
-      if(loc.town) p.append('town',loc.town);
-      if(sport) p.append('sport',sport);
-      const r=await fetch(`${API}/api/players/available?${p}`);
-      const d=await r.json();
-      // Filter out self
-      const others = (d.players||[]).filter(p => p.player_id !== user._id);
+  const search = useCallback(async()=>{
+    if(!loc.district) return;
+    setLoading(true); setSearched(true);
+    try {
+      const p = new URLSearchParams({ district: loc.district });
+      if (loc.town) p.append('town', loc.town);
+      if (sport) p.append('sport', sport);
+      const r = await fetch(`${API}/api/players/available?${p}`);
+      const d = await r.json();
+      const others = (d.players || []).filter(p => p.player_id !== user._id);
       setPlayers(others);
     } catch { setPlayers([]); }
     setLoading(false);
-  };
+  }, [loc, sport, user._id]);
+
+  useEffect(() => { if (loc.district) search(); }, [search]);
 
   const invitePlayer = async (pid) => {
     setInviteStatus(s => ({...s, [pid]: 'Sending...'}));
@@ -689,19 +707,33 @@ function FindSubstitutesTab({ user }) {
 
 // ── Tab: Book Indoor ───────────────────────────────────────────────────────────
 function BookIndoorTab({ user, onDone }) {
-  const [loc, setLoc] = useState({province:'',district:'',town:''});
+  const [loc, setLoc] = useState({
+    province: user?.address?.province || '',
+    district: user?.address?.district || '',
+    town: user?.address?.town || ''
+  });
   const [sport, setSport] = useState('');
   const [turfs, setTurfs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [bookTarget, setBook] = useState(null);
 
-  const search = async()=>{
-    if(!loc.district){alert('Please select a District.');return;}
-    setLoading(true);setSearched(true);
-    try{const p=new URLSearchParams({district:loc.district});if(loc.province)p.append('province',loc.province);if(loc.town)p.append('town',loc.town);if(sport)p.append('sport',sport);const r=await fetch(`${API}/api/turfs?${p}`);const d=await r.json();setTurfs(d.turfs||[]);}catch{setTurfs([]);}
+  const search = useCallback(async()=>{
+    if(!loc.district) return;
+    setLoading(true); setSearched(true);
+    try {
+      const p = new URLSearchParams({ district: loc.district });
+      if (loc.province) p.append('province', loc.province);
+      if (loc.town) p.append('town', loc.town);
+      if (sport) p.append('sport', sport);
+      const r = await fetch(`${API}/api/turfs?${p}`);
+      const d = await r.json();
+      setTurfs(d.turfs || []);
+    } catch { setTurfs([]); }
     setLoading(false);
-  };
+  }, [loc, sport]);
+
+  useEffect(() => { if (loc.district) search(); }, [search]);
 
   return (
     <div className="space-y-5">

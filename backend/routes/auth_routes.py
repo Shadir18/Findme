@@ -184,7 +184,8 @@ def login():
                 "_id": str(user["_id"]),
                 "name": user.get("name"),
                 "email": user.get("email"),
-                "role": user.get("role")
+                "role": user.get("role"),
+                "address": user.get("address")
             }), 200
         else:
             return jsonify({"error": "Invalid email or password."}), 401

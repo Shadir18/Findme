@@ -1,55 +1,150 @@
-from flask import Blueprint, request, jsonify
+import random
+import requests
+from datetime import datetime, timedelta
+from flask import Blueprint, request, jsonify, current_app
+from flask_mail import Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import db
+from extensions import mail
 
 auth_bp = Blueprint('auth', __name__)
 
-@auth_bp.route('/api/signup', methods=['POST'])
-def signup():
+# Mock storage for pending OTPs (In production, use Redis or a DB collection)
+pending_otps = {} 
+
+@auth_bp.route('/api/signup-request', methods=['POST'])
+def signup_request():
     try:
-        # Get the data sent from our React form
         data = request.json
         email = data.get("email")
-        password = data.get("password")
-        role = data.get("role")
-
-        # 1. Check if the email is already registered in the 'users' collection
+        
+        # 1. Check if the email is already registered
         if db.users.find_one({"email": email}):
             return jsonify({"error": "An account with this email already exists."}), 400
 
-        # 2. Scramble the password for security
-        hashed_password = generate_password_hash(password)
-
-        # 3. Create the base profile that BOTH players and owners share
-        new_account = {
-            "email": email,
-            "phone": data.get("phone"),
-            "password": hashed_password,
-            "role": role,
-            "name": data.get("name") # This is either the Player's name or the Owner's personal name
+        # 2. Generate a 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+        
+        # 3. Store OTP and the data for 10 minutes
+        pending_otps[email] = {
+            "otp": otp,
+            "data": data,
+            "expires_at": datetime.now() + timedelta(minutes=10)
         }
 
-        # 4. SMART ROUTING: Add the specific data depending on their role
-        if role == 'player':
-            new_account["dob"] = data.get("dob")
-            new_account["area"] = data.get("area")
-            
-        elif role == 'turf_owner':
-            new_account["indoor_name"] = data.get("indoor_name")
-            new_account["address"] = data.get("address") # This contains province, district, town, etc.
-            new_account["timing"] = data.get("timing")
-            new_account["pricing"] = data.get("pricing") # This contains our dynamic 2x2 pricing matrix
-            new_account["facilities"] = data.get("facilities")
-            
-            # Note: We save the image string directly. In a production app, you'd save this to AWS S3, 
-            # but for a university project, saving the Base64 string to MongoDB is perfectly fine!
-            new_account["turf_image"] = data.get("turf_image")
+        # 4. SEND REAL EMAIL
+        try:
+            msg = Message(
+                subject="FINDME - Verify Your Account",
+                recipients=[email],
+                html=f"""
+                <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #1d4ed8; text-align: center; font-style: italic;">FINDME</h2>
+                    <p>Hello <strong>{data.get('name')}</strong>,</p>
+                    <p>Thank you for choosing FINDME! Use the code below to verify your account:</p>
+                    <div style="background: #f3f4f6; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #111827;">{otp}</span>
+                    </div>
+                    <p style="color: #6b7280; font-size: 12px; text-align: center;">This code will expire in 10 minutes.</p>
+                </div>
+                """
+            )
+            mail.send(msg)
+            print(f"[SUCCESS] Real email sent to {email}")
+        except Exception as mail_err:
+            print(f"[WARNING] Could not send real email: {mail_err}")
 
-        # 5. Save the complete package to the database (Make sure it's db.users plural!)
+        # 4.5 SEND REAL SMS (NOTIFY.LK)
+        try:
+            phone = data.get('phone', '')
+            # Clean phone number (Lanka numbers usually start with 0, Notify.lk needs 94)
+            if phone.startswith('0'):
+                phone = '94' + phone[1:]
+            
+            sms_payload = {
+                'user_id': current_app.config['NOTIFY_USER_ID'],
+                'api_key': current_app.config['NOTIFY_API_KEY'],
+                'sender_id': current_app.config['NOTIFY_SENDER_ID'],
+                'to': phone,
+                'message': f"Your FINDME verification code is: {otp}"
+            }
+            
+            sms_response = requests.get('https://app.notify.lk/api/v1/send', params=sms_payload)
+            if sms_response.status_code == 200:
+                print(f"[SUCCESS] Real SMS sent to {phone}")
+            else:
+                print(f"[ERROR] Notify.lk returned status {sms_response.status_code}")
+                
+        except Exception as sms_err:
+            print(f"[WARNING] Could not send real SMS: {sms_err}")
+
+        # 5. MOCK LOG (Terminal only)
+        print(f"\n[OTP VERIFICATION] TO: {email} / {data.get('phone')}")
+        print(f"[OTP CODE]: {otp}")
+        print("--------------------------------------------------\n")
+
+        # For the university project, we'll return the OTP in the response 
+        # so the user doesn't have to check the terminal, but in prod you'd remove this.
+        return jsonify({
+            "message": "OTP sent to your email and phone!",
+            "debug_otp": otp # REMOVE THIS FOR PRODUCTION
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@auth_bp.route('/api/verify-otp', methods=['POST'])
+def verify_otp():
+    try:
+        data = request.json
+        email = data.get("email")
+        submitted_otp = data.get("otp")
+
+        # 1. Check if we have a pending OTP for this email
+        if email not in pending_otps:
+            return jsonify({"error": "No verification session found."}), 400
+        
+        record = pending_otps[email]
+        
+        # 2. Check expiration
+        if datetime.now() > record["expires_at"]:
+            del pending_otps[email]
+            return jsonify({"error": "OTP has expired. Please try again."}), 400
+
+        # 3. Securely check OTP (simple string comparison for now)
+        if record["otp"] != submitted_otp:
+            return jsonify({"error": "Invalid OTP code."}), 401
+
+        # 4. OTP IS VALID! Now finalize the registration
+        user_data = record["data"]
+        password = user_data.get("password")
+        role = user_data.get("role")
+        hashed_password = generate_password_hash(password)
+
+        new_account = {
+            "email": email,
+            "phone": user_data.get("phone"),
+            "password": hashed_password,
+            "role": role,
+            "name": user_data.get("name"),
+            "address": user_data.get("address")
+        }
+
+        if role == 'player':
+            new_account["dob"] = user_data.get("dob")
+            new_account["area"] = user_data.get("area")
+        elif role == 'turf_owner':
+            new_account["indoor_name"] = user_data.get("indoor_name")
+            new_account["timing"] = user_data.get("timing")
+            new_account["pricing"] = user_data.get("pricing")
+            new_account["facilities"] = user_data.get("facilities")
+            new_account["turf_image"] = user_data.get("turf_image")
+
+        # 5. Insert into Database
         result = db.users.insert_one(new_account)
         owner_id = str(result.inserted_id)
 
-        # 6. Auto-generate the actual court records in db.courts based on facilities
+        # 6. Auto-generate courts for owners
         if role == 'turf_owner':
             facilities = new_account.get("facilities", [])
             for fac in facilities:
@@ -66,10 +161,12 @@ def signup():
                         "available": True
                     })
 
-        return jsonify({"message": "Account created successfully!"}), 201
+        # 7. Cleanup
+        del pending_otps[email]
+
+        return jsonify({"message": "Verification successful! Account created."}), 201
 
     except Exception as e:
-        # If anything goes wrong, we send the exact error back to React so we can read it
         return jsonify({"error": str(e)}), 500
 
 @auth_bp.route('/api/login', methods=['POST'])

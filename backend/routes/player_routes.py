@@ -622,3 +622,18 @@ def get_player_bookings(player_id):
         return jsonify({"bookings": bookings}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@player_bp.route('/api/courts/<court_id>/busy-slots', methods=['GET'])
+def get_busy_slots(court_id):
+    try:
+        date = request.args.get('date')
+        if not date: return jsonify({'busy': []}), 200
+        query = {'court_id': court_id, 'date': date, 'status': {'$ne': 'Cancelled'}}
+        busy = [b.get('time') for b in db.bookings.find(query) if b.get('time')]
+        court = db.courts.find_one({'_id': ObjectId(court_id)})
+        if court:
+            m_query = {'owner_id': court['owner_id'], 'court': court['name'], 'date': date, 'status': {'$ne': 'Cancelled'}, 'court_id': {'$exists': False}}
+            busy.extend([b.get('time') for b in db.bookings.find(m_query) if b.get('time')])
+        return jsonify({'busy': list(set(busy))}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

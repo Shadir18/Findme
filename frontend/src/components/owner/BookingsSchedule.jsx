@@ -130,21 +130,40 @@ export default function BookingsSchedule({
                       <div key={`${court.name}-${hour}`} className="flex-1 min-w-[200px] border-r border-gray-100 relative p-1.5 bg-white transition-colors">
                         
                         {slotBooking ? (
-                          // --- UPDATED BOOKED SLOT (Now Clickable!) ---
-                          <button 
-                            onClick={() => setDetailModal(slotBooking)} 
-                            className="h-full w-full bg-gray-900 rounded-lg p-3 border-l-4 border-yellow-400 shadow-sm flex flex-col justify-center relative overflow-hidden group/card cursor-pointer hover:bg-gray-800 transition-colors text-left text-white"
-                          >
-                            <span className="absolute top-2 right-2 flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                            </span>
-                            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-1 truncate">
-                              {slotBooking.status || 'Booked'}
-                            </p>
-                            <p className="text-sm font-black truncate">{slotBooking.customerName || slotBooking.team || slotBooking.player_name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 mt-1 truncate font-mono">LKR {slotBooking.amount || slotBooking.price || 0}</p>
-                          </button>
+                          (() => {
+                            const isOnline = slotBooking.type === 'player_online';
+                            return (
+                              <button 
+                                onClick={() => setDetailModal(slotBooking)} 
+                                className={`h-full w-full rounded-lg p-3 border-l-4 shadow-sm flex flex-col justify-center relative overflow-hidden group/card cursor-pointer transition-all text-left text-white ${
+                                  isOnline 
+                                    ? 'bg-[#0a0a0a] border-[#01B636] hover:bg-black shadow-[0_4px_12px_rgba(1,182,54,0.1)]' 
+                                    : 'bg-gray-900 border-yellow-400 hover:bg-gray-800'
+                                }`}
+                              >
+                                <span className="absolute top-2 right-2 flex h-2 w-2">
+                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isOnline ? 'bg-[#01B636]' : 'bg-yellow-400'}`}></span>
+                                  <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-[#01B636]' : 'bg-yellow-500'}`}></span>
+                                </span>
+                                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 truncate ${isOnline ? 'text-[#01B636]' : 'text-yellow-400'}`}>
+                                  {isOnline ? '✅ PAID · ONLINE' : (slotBooking.status || 'Booked')}
+                                </p>
+                                <p className="text-sm font-black truncate leading-tight">
+                                  {slotBooking.customerName || slotBooking.team || 'Player'}
+                                </p>
+                                <div className="flex items-center justify-between mt-auto pt-1">
+                                  <p className="text-[10px] font-bold text-gray-500 truncate font-mono">
+                                    LKR {(slotBooking.amount || 0).toLocaleString()}
+                                  </p>
+                                  {isOnline && (
+                                    <span className="text-[7px] bg-[#01B636]/10 text-[#01B636] px-1.5 py-0.5 rounded border border-[#01B636]/30 font-black tracking-tighter uppercase">
+                                      Verified
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })()
                         ) : (
                           // AVAILABLE SLOT
                           <button 

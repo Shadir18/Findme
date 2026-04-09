@@ -339,7 +339,33 @@ export default function Signup() {
                           <input type="number" placeholder="Standard Hourly Rate" className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-gray-200 focus:border-green-500 outline-none text-sm font-mono" value={formData.standard_rate} onChange={(e) => setFormData({...formData, standard_rate: e.target.value})} />
                         </div>
                       )}
-                      {/* ... other pricing modes keep concise for readability ... */}
+                      {hasDayNightPricing && !hasWeekendPricing && (
+                        <div className="flex gap-3 animate-fadeIn">
+                          <input type="number" placeholder="Day Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.day_rate} onChange={(e) => setFormData({...formData, day_rate: e.target.value})} />
+                          <input type="number" placeholder="Night Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.night_rate} onChange={(e) => setFormData({...formData, night_rate: e.target.value})} />
+                        </div>
+                      )}
+                      {!hasDayNightPricing && hasWeekendPricing && (
+                        <div className="flex gap-3 animate-fadeIn">
+                          <input type="number" placeholder="Weekday Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_rate} onChange={(e) => setFormData({...formData, weekday_rate: e.target.value})} />
+                          <input type="number" placeholder="Weekend Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_rate} onChange={(e) => setFormData({...formData, weekend_rate: e.target.value})} />
+                        </div>
+                      )}
+                      {hasDayNightPricing && hasWeekendPricing && (
+                        <div className="grid grid-cols-2 gap-3 animate-fadeIn">
+                          <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block text-center">Weekday</span>
+                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_day_rate} onChange={(e) => setFormData({...formData, weekday_day_rate: e.target.value})} />
+                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_night_rate} onChange={(e) => setFormData({...formData, weekday_night_rate: e.target.value})} />
+                          </div>
+                          <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block text-center">Weekend</span>
+                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_day_rate} onChange={(e) => setFormData({...formData, weekend_day_rate: e.target.value})} />
+                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_night_rate} onChange={(e) => setFormData({...formData, weekend_night_rate: e.target.value})} />
+                          </div>
+                        </div>
+                      )}
+
                       <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-2">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input type="checkbox" checked={hasDayNightPricing} onChange={(e) => setHasDayNightPricing(e.target.checked)} className="accent-green-600" />

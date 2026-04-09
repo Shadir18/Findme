@@ -215,9 +215,23 @@ function PayModal({ group, playerId, onClose, onSuccess }) {
 function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   const [date, setDate] = useState('');
   const [slot, setSlot] = useState('');
+  const [busy, setBusy] = useState([]);
+  const [loadingBusy, setLB] = useState(false);
   const [step, setStep] = useState(1);
   const [card, setCard] = useState({card_number:'',card_name:'',expiry:'',cvv:''});
   const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (date && court?._id) {
+      setLB(true);
+      fetch(`${API}/api/courts/${court._id}/busy-slots?date=${date}`)
+        .then(r => r.json())
+        .then(d => setBusy(d.busy || []))
+        .catch(() => setBusy([]))
+        .finally(() => setLB(false));
+      setSlot('');
+    }
+  }, [date, court?._id]);
 
   let startHour = parseInt((turf?.timing?.open||'06:00').split(':')[0], 10);
   let endHour = parseInt((turf?.timing?.close||'23:00').split(':')[0], 10);
@@ -232,7 +246,6 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   for (let h = startHour; h < endHour; h++) {
     let startH = h % 24;
     let endH = (h + 1) % 24;
-    // To ensure "24:00" doesn't appear, use 00:00 for midnight
     slots.push(`${String(startH).padStart(2,'0')}:00 - ${String(endH).padStart(2,'0')}:00`);
   }
   const rate = Number(turf?.pricing?.weekday?.day||turf?.pricing?.standard||1500);
@@ -247,6 +260,9 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   const handlePay = async e => {
     e.preventDefault();
     if(!card.card_number||!card.card_name||!card.expiry||!card.cvv){setErr('All card fields required.');return;}
+    // Final safety check: is it STILL available?
+    if (busy.includes(slot)) { setErr('This slot was just taken. Please pick another.'); return; }
+    
     setErr('');
     try{
       const r=await fetch(`${API}/api/player/book`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({player_id:playerId,owner_id:turf._id,court_id:court._id,court_name:court.name,sport:court.sport,date,time_slot:slot,amount:rate,indoor_name:turf.indoor_name})});
@@ -270,11 +286,30 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
             {err&&<p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-xl p-3">{err}</p>}
             <div><label className={lbl}>Select Date</label><input type="date" min={new Date().toISOString().split('T')[0]} className={inp} value={date} onChange={e=>setDate(e.target.value)} /></div>
             <div>
-              <label className={lbl}>Select Time Slot</label>
+              <label className={lbl}>Select Time Slot {loadingBusy && <span className="text-blue-500 animate-pulse ml-2 font-normal lowercase tracking-normal">Checking availability...</span>}</label>
               <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-1">
-                {slots.map(t=>(
-                  <button key={t} type="button" onClick={()=>setSlot(t)} className={`px-2 py-2 rounded-xl border text-xs font-bold transition ${slot===t?'bg-gray-900 text-white border-gray-900':'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600'}`}>{t}</button>
-                ))}
+                {slots.map(t=>{
+                  const isBusy = busy.includes(t);
+                  return (
+                    <button 
+                      key={t} 
+                      type="button" 
+                      disabled={isBusy}
+                      onClick={()=>setSlot(t)} 
+                      className={`flex flex-col items-center justify-center px-1 py-1.5 rounded-xl border text-[10px] sm:text-xs font-black transition-all min-h-[54px] ${
+                        isBusy ? 'bg-red-50 border-red-100 text-red-200 line-through cursor-not-allowed opacity-70' :
+                        slot===t ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105 z-10' : 
+                        'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-blue-50/50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1">
+                        {isBusy && <span>🚫</span>}
+                        {t}
+                      </span>
+                      {isBusy && <span className="text-[8px] font-bold uppercase tracking-tighter mt-0.5 opacity-80">Booked</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl p-4">
@@ -627,21 +662,24 @@ function FindSubstitutesTab({ user }) {
   const [inviteStatus, setInviteStatus] = useState({}); // track invitations
 
   const search = useCallback(async()=>{
-    if(!loc.district) return;
-    setLoading(true); setSearched(true);
-    try {
-      const p = new URLSearchParams({ district: loc.district });
-      if (loc.town) p.append('town', loc.town);
-      if (sport) p.append('sport', sport);
-      const r = await fetch(`${API}/api/players/available?${p}`);
-      const d = await r.json();
-      const others = (d.players || []).filter(p => p.player_id !== user._id);
+    if(!loc.district){return;}
+    setLoading(true);setSearched(true);
+    try{
+      const p=new URLSearchParams({district:loc.district});
+      if(loc.town) p.append('town',loc.town);
+      if(sport) p.append('sport',sport);
+      const r=await fetch(`${API}/api/players/available?${p}`);
+      const d=await r.json();
+      // Filter out self
+      const others = (d.players||[]).filter(p => p.player_id !== user._id);
       setPlayers(others);
     } catch { setPlayers([]); }
     setLoading(false);
-  }, [loc, sport, user._id]);
+  }, [loc.district, loc.town, sport, user._id]);
 
-  useEffect(() => { if (loc.district) search(); }, [search]);
+  useEffect(() => {
+    if (loc.district) search();
+  }, [search]);
 
   const invitePlayer = async (pid) => {
     setInviteStatus(s => ({...s, [pid]: 'Sending...'}));
@@ -719,21 +757,15 @@ function BookIndoorTab({ user, onDone }) {
   const [bookTarget, setBook] = useState(null);
 
   const search = useCallback(async()=>{
-    if(!loc.district) return;
-    setLoading(true); setSearched(true);
-    try {
-      const p = new URLSearchParams({ district: loc.district });
-      if (loc.province) p.append('province', loc.province);
-      if (loc.town) p.append('town', loc.town);
-      if (sport) p.append('sport', sport);
-      const r = await fetch(`${API}/api/turfs?${p}`);
-      const d = await r.json();
-      setTurfs(d.turfs || []);
-    } catch { setTurfs([]); }
+    if(!loc.district){return;}
+    setLoading(true);setSearched(true);
+    try{const p=new URLSearchParams({district:loc.district});if(loc.province)p.append('province',loc.province);if(loc.town)p.append('town',loc.town);if(sport)p.append('sport',sport);const r=await fetch(`${API}/api/turfs?${p}`);const d=await r.json();setTurfs(d.turfs||[]);}catch{setTurfs([]);}
     setLoading(false);
-  }, [loc, sport]);
+  }, [loc.district, loc.province, loc.town, sport]);
 
-  useEffect(() => { if (loc.district) search(); }, [search]);
+  useEffect(() => {
+    if (loc.district) search();
+  }, [search]);
 
   return (
     <div className="space-y-5">

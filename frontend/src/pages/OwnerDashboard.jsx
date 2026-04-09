@@ -218,7 +218,7 @@ export default function OwnerDashboard() {
               <div className="space-y-6">
                 <QuickActions {...sharedProps} />
                 <CourtManagement {...sharedProps} compact />
-                <RecentBookings {...sharedProps} compact />
+                <RecentBookings {...sharedProps} compact onSelect={setDetailModal} />
               </div>
             </div>
           </div>

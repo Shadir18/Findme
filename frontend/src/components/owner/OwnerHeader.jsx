@@ -17,6 +17,7 @@ const TypeIcon = ({ type }) => {
 export default function OwnerHeader({ user, notifications = [], setNotifications, showNotifications, setShowNotifications, searchQuery, setSearchQuery, setActiveTab }) {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState(null);
 
   const handleLogout = () => {
     sessionStorage.removeItem('user');
@@ -24,19 +25,29 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
   };
 
   const markAllRead = () => {
-    // Optimistic UI clear
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
   const handleNotifClick = (n) => {
-    if (setActiveTab) setActiveTab('bookings');
-    setShowNotifications(false);
+    setSelectedNotif(n);
+    setNotifications(prev => (prev||[]).map(item => 
+      (item.id === n.id || item._id === n._id) ? { ...item, read: true } : item
+    ));
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = (notifications||[]).filter(n => !n.read).length;
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
+      {selectedNotif && (
+        <NotifDetailModal 
+          notif={selectedNotif} 
+          onClose={() => {
+            if (selectedNotif.type === 'booking' && setActiveTab) setActiveTab('bookings');
+            setSelectedNotif(null);
+          }} 
+        />
+      )}
       <div className="max-w-screen-xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex items-center gap-4 h-16">
 
@@ -93,22 +104,46 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
                       </button>
                     </div>
                   </div>
-                  <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
+                  <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
                     {notifications.length === 0 && (
-                      <p className="p-4 text-center text-xs text-gray-500">No recent notifications</p>
+                      <p className="p-8 text-center text-xs text-gray-400 italic">No recent activity</p>
                     )}
-                    {notifications.map(n => (
-                      <button key={n.id || n._id} onClick={() => handleNotifClick(n)} className={`w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-gray-50 transition border-l-2 ${n.read ? 'border-transparent opacity-60' : 'border-blue-500 bg-blue-50/50'}`}>
-                        <TypeIcon type={n.type || 'booking'} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-gray-900 text-xs font-bold leading-snug">{n.title || 'Notification'}</p>
-                          <p className="text-gray-600 text-xs leading-snug mt-0.5">{n.message}</p>
-                          <p className="text-gray-400 text-[10px] mt-1">
-                            {n.created_at ? new Date(n.created_at).toLocaleDateString() : 'Just now'}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
+                    
+                    {/* UNREAD STACK */}
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <div className="bg-blue-50/30">
+                        <div className="px-4 py-2 text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] bg-blue-50/50 border-b border-blue-100/50">New For You</div>
+                        {notifications.filter(n => !n.read).map(n => (
+                          <button key={n.id || n._id} onClick={() => handleNotifClick(n)} className="w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-white transition border-l-4 border-blue-600">
+                            <TypeIcon type={n.type || 'booking'} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-900 text-xs font-black leading-snug">{n.title || 'Notification'}</p>
+                              <p className="text-gray-600 text-[11px] leading-snug mt-0.5">{n.message}</p>
+                              <p className="text-blue-500 text-[9px] font-bold mt-1 uppercase tracking-tighter italic">Just now · New</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* READ STACK */}
+                    {notifications.filter(n => n.read).length > 0 && (
+                      <div>
+                        <div className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] bg-gray-50/50 border-b border-gray-100">Earlier</div>
+                        {notifications.filter(n => n.read).map(n => (
+                          <button key={n.id || n._id} onClick={() => handleNotifClick(n)} className="w-full text-left px-4 py-3 flex gap-3 items-start hover:bg-gray-50 transition opacity-60">
+                            <TypeIcon type={n.type || 'booking'} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-700 text-xs font-bold leading-snug">{n.title || 'Notification'}</p>
+                              <p className="text-gray-500 text-[11px] leading-snug mt-0.5">{n.message}</p>
+                              <p className="text-gray-400 text-[9px] mt-1">
+                                {n.created_at ? new Date(n.created_at).toLocaleDateString() : 'Viewed'}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -151,5 +186,38 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
         </div>
       </div>
     </header>
+  );
+}
+
+function NotifDetailModal({ notif, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
+      <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl overflow-hidden animate-zoomIn" onClick={e => e.stopPropagation()}>
+        <div className="bg-gray-900 p-6 flex items-center justify-between">
+          <h3 className="text-white font-black text-lg italic uppercase tracking-tight">Notification</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">✕</button>
+        </div>
+        <div className="p-7 space-y-4">
+          <div className="flex items-center gap-3">
+            <TypeIcon type={notif.type} />
+            <p className="text-gray-900 text-lg font-black leading-tight">{notif.title || 'Notification'}</p>
+          </div>
+          <p className="text-gray-600 font-medium leading-relaxed bg-gray-50 p-4 rounded-2xl border border-gray-100 italic">
+            "{notif.message}"
+          </p>
+          <div className="pt-2">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Received</p>
+            <p className="text-xs font-bold text-gray-500 mt-1">
+              {notif.created_at ? new Date(notif.created_at).toLocaleString() : 'Just now'}
+            </p>
+          </div>
+        </div>
+        <div className="p-6 bg-gray-50 border-t border-gray-100">
+          <button onClick={onClose} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95">
+            Okay, Got it
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

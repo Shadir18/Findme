@@ -7,7 +7,7 @@ const STATUS_STYLES = {
   Cancelled: 'bg-red-50 text-red-600 border-red-200',
 };
 
-export default function RecentBookings({ bookings, compact }) {
+export default function RecentBookings({ bookings, compact, onSelect }) {
   const [filter, setFilter] = useState('30');
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -63,7 +63,7 @@ export default function RecentBookings({ bookings, compact }) {
           <div className="text-gray-500 text-sm text-center py-8">No bookings found in this range.</div>
         )}
         {displayed.map(b => (
-          <div key={b.id} className="grid grid-cols-12 gap-2 px-5 py-3 hover:bg-blue-50/50 transition items-center">
+          <div key={b.id} onClick={() => onSelect && onSelect(b)} className="grid grid-cols-12 gap-2 px-5 py-3 hover:bg-blue-50 cursor-pointer transition items-center group">
             <div className="col-span-2 text-gray-600 text-xs font-semibold">{new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}</div>
             <div className="col-span-2 text-gray-500 text-xs">{b.time.split(' - ')[0]}</div>
             <div className="col-span-2 text-gray-700 text-xs truncate">{b.sport}</div>

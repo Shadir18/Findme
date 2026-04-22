@@ -55,7 +55,6 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [otp, setOtp] = useState('');
-  const [debugOtp, setDebugOtp] = useState(''); // Kept internal but removed from UI
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCustomTown, setIsCustomTown] = useState(false);
 
@@ -132,13 +131,13 @@ export default function Signup() {
 
       if (role === 'player') {
         payload.dob = formData.dob;
-        payload.area = formData.town; 
+        payload.area = formData.town;
         payload.address = { province: formData.province, district: formData.district, town: formData.town };
       } else {
         payload.indoor_name = formData.indoor_name;
         payload.address = { province: formData.province, district: formData.district, town: formData.town, physical: formData.address };
         payload.timing = { open: formData.opening_time, close: formData.closing_time };
-        
+
         let finalPricing = { weekday: { day: '', night: '' }, weekend: { day: '', night: '' } };
         if (!hasDayNightPricing && !hasWeekendPricing) {
           finalPricing = { weekday: { day: formData.standard_rate, night: formData.standard_rate }, weekend: { day: formData.standard_rate, night: formData.standard_rate } };
@@ -159,15 +158,15 @@ export default function Signup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
+
       const data = await response.json();
       if (response.ok) {
         setIsVerifying(true);
-        if (data.debug_otp) setDebugOtp(data.debug_otp);
+        if (data.debug_otp) console.log("OTP Sent (simulated)");
       } else {
         setError(data.error || "Registration Request Failed");
       }
-    } catch (err) {
+    } catch {
       setError("Could not reach the server.");
     } finally {
       setIsSubmitting(false);
@@ -192,7 +191,7 @@ export default function Signup() {
       } else {
         setError(data.error || "Verification Failed");
       }
-    } catch (err) {
+    } catch {
       setError("Server error during verification.");
     } finally {
       setIsSubmitting(false);
@@ -202,7 +201,7 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12 animate-fadeIn font-sans">
       <div className={`w-full transition-all duration-500 ${role === 'player' ? 'max-w-xl' : 'max-w-3xl'}`}>
-        
+
         <div className={`rounded-t-[2.5rem] p-8 text-center shadow-lg transition-colors duration-500 ${role === 'player' ? 'bg-gradient-to-br from-blue-700 to-blue-500' : 'bg-gradient-to-br from-green-700 to-green-500'}`}>
           <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">
             {role === 'player' ? <>JOIN THE <span className="text-yellow-300">SQUAD</span></> : <>LIST YOUR <span className="text-yellow-300">INDOOR</span></>}
@@ -213,7 +212,7 @@ export default function Signup() {
         </div>
 
         <div className="bg-white p-8 md:p-10 rounded-b-[2.5rem] shadow-xl border-x border-b border-gray-100">
-          
+
           <div className="flex bg-gray-100 rounded-full p-1 mb-8 shadow-inner max-w-sm mx-auto">
             <button type="button" onClick={() => setRole('player')} className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded-full transition-all ${role === 'player' ? 'bg-white text-blue-700 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}>Player</button>
             <button type="button" onClick={() => setRole('turf_owner')} className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded-full transition-all ${role === 'turf_owner' ? 'bg-white text-green-700 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}>Turf Owner</button>
@@ -222,32 +221,32 @@ export default function Signup() {
           {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-sm text-center font-bold border border-red-100">{error}</div>}
 
           <form onSubmit={handleRegister} className="space-y-8">
-            
+
             {/* --- SECTION 1: ACCOUNT BASICS --- */}
             <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Account Basics</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Full Name</label>
-                  <input type="text" required placeholder="Kamal Perera" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <input type="text" required placeholder="Kamal Perera" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Email Address</label>
-                  <input type="email" required placeholder="kamal@example.com" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value.toLowerCase()})} />
+                  <input type="email" required placeholder="kamal@example.com" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Phone Number</label>
-                  <input type="tel" required placeholder="07XXXXXXXX" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+                  <input type="tel" required placeholder="07XXXXXXXX" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                 </div>
                 {role === 'player' ? (
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Date of Birth</label>
-                    <input type="date" required className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.dob} onChange={(e) => setFormData({...formData, dob: e.target.value})} />
+                    <input type="date" required className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none transition-all text-sm" value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} />
                   </div>
                 ) : (
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Indoor / Facility Name</label>
-                    <input type="text" required placeholder="Kandy Futsal Arena" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none transition-all text-sm" value={formData.indoor_name} onChange={(e) => setFormData({...formData, indoor_name: e.target.value})} />
+                    <input type="text" required placeholder="Kandy Futsal Arena" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none transition-all text-sm" value={formData.indoor_name} onChange={(e) => setFormData({ ...formData, indoor_name: e.target.value })} />
                   </div>
                 )}
               </div>
@@ -257,17 +256,17 @@ export default function Signup() {
             <div>
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-4">Location</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <select required className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white" 
-                  value={formData.province} 
-                  onChange={(e) => setFormData({...formData, province: e.target.value, district: '', town: ''})}
+                <select required className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white"
+                  value={formData.province}
+                  onChange={(e) => setFormData({ ...formData, province: e.target.value, district: '', town: '' })}
                 >
                   <option value="">Province</option>
                   {Object.keys(sriLankaData).map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
 
-                <select required disabled={!formData.province} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white disabled:bg-gray-50" 
-                  value={formData.district} 
-                  onChange={(e) => setFormData({...formData, district: e.target.value, town: ''})}
+                <select required disabled={!formData.province} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white disabled:bg-gray-50"
+                  value={formData.district}
+                  onChange={(e) => setFormData({ ...formData, district: e.target.value, town: '' })}
                 >
                   <option value="">District</option>
                   {formData.province && Object.keys(sriLankaData[formData.province]).map(d => <option key={d} value={d}>{d}</option>)}
@@ -275,10 +274,10 @@ export default function Signup() {
 
                 <div className="relative">
                   {!isCustomTown ? (
-                    <select required disabled={!formData.district} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white disabled:bg-gray-50" 
-                      onChange={(e) => { 
-                        if(e.target.value === 'CUSTOM') { setIsCustomTown(true); setFormData({...formData, town: ''}); } 
-                        else { setFormData({...formData, town: e.target.value}); } 
+                    <select required disabled={!formData.district} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 outline-none text-sm bg-white disabled:bg-gray-50"
+                      onChange={(e) => {
+                        if (e.target.value === 'CUSTOM') { setIsCustomTown(true); setFormData({ ...formData, town: '' }); }
+                        else { setFormData({ ...formData, town: e.target.value }); }
                       }}
                       value={formData.town}
                     >
@@ -288,14 +287,14 @@ export default function Signup() {
                     </select>
                   ) : (
                     <div className="relative">
-                      <input type="text" placeholder="Type Town Name" className="w-full px-4 py-3 rounded-xl border-2 border-green-500 focus:border-green-600 outline-none text-sm bg-green-50" value={formData.town} onChange={(e) => setFormData({...formData, town: e.target.value})} />
-                      <button type="button" onClick={() => { setIsCustomTown(false); setFormData({...formData, town: ''}); }} className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center">✕</button>
+                      <input type="text" placeholder="Type Town Name" className="w-full px-4 py-3 rounded-xl border-2 border-green-500 focus:border-green-600 outline-none text-sm bg-green-50" value={formData.town} onChange={(e) => setFormData({ ...formData, town: e.target.value })} />
+                      <button type="button" onClick={() => { setIsCustomTown(false); setFormData({ ...formData, town: '' }); }} className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center">✕</button>
                     </div>
                   )}
                 </div>
               </div>
               {role === 'turf_owner' && (
-                <textarea placeholder="Physical Address (Road, No, Landmarks)" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none text-sm h-20 resize-none" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                <textarea placeholder="Physical Address (Road, No, Landmarks)" className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none text-sm h-20 resize-none" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
               )}
             </div>
 
@@ -336,32 +335,32 @@ export default function Signup() {
                       {!hasDayNightPricing && !hasWeekendPricing && (
                         <div className="relative">
                           <div className="absolute left-4 top-3.5 text-xs font-bold text-gray-400">LKR</div>
-                          <input type="number" placeholder="Standard Hourly Rate" className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-gray-200 focus:border-green-500 outline-none text-sm font-mono" value={formData.standard_rate} onChange={(e) => setFormData({...formData, standard_rate: e.target.value})} />
+                          <input type="number" placeholder="Standard Hourly Rate" className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-gray-200 focus:border-green-500 outline-none text-sm font-mono" value={formData.standard_rate} onChange={(e) => setFormData({ ...formData, standard_rate: e.target.value })} />
                         </div>
                       )}
                       {hasDayNightPricing && !hasWeekendPricing && (
                         <div className="flex gap-3 animate-fadeIn">
-                          <input type="number" placeholder="Day Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.day_rate} onChange={(e) => setFormData({...formData, day_rate: e.target.value})} />
-                          <input type="number" placeholder="Night Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.night_rate} onChange={(e) => setFormData({...formData, night_rate: e.target.value})} />
+                          <input type="number" placeholder="Day Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.day_rate} onChange={(e) => setFormData({ ...formData, day_rate: e.target.value })} />
+                          <input type="number" placeholder="Night Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.night_rate} onChange={(e) => setFormData({ ...formData, night_rate: e.target.value })} />
                         </div>
                       )}
                       {!hasDayNightPricing && hasWeekendPricing && (
                         <div className="flex gap-3 animate-fadeIn">
-                          <input type="number" placeholder="Weekday Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_rate} onChange={(e) => setFormData({...formData, weekday_rate: e.target.value})} />
-                          <input type="number" placeholder="Weekend Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_rate} onChange={(e) => setFormData({...formData, weekend_rate: e.target.value})} />
+                          <input type="number" placeholder="Weekday Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_rate} onChange={(e) => setFormData({ ...formData, weekday_rate: e.target.value })} />
+                          <input type="number" placeholder="Weekend Rate" className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_rate} onChange={(e) => setFormData({ ...formData, weekend_rate: e.target.value })} />
                         </div>
                       )}
                       {hasDayNightPricing && hasWeekendPricing && (
                         <div className="grid grid-cols-2 gap-3 animate-fadeIn">
                           <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
                             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block text-center">Weekday</span>
-                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_day_rate} onChange={(e) => setFormData({...formData, weekday_day_rate: e.target.value})} />
-                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_night_rate} onChange={(e) => setFormData({...formData, weekday_night_rate: e.target.value})} />
+                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_day_rate} onChange={(e) => setFormData({ ...formData, weekday_day_rate: e.target.value })} />
+                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekday_night_rate} onChange={(e) => setFormData({ ...formData, weekday_night_rate: e.target.value })} />
                           </div>
                           <div className="space-y-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
                             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block text-center">Weekend</span>
-                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_day_rate} onChange={(e) => setFormData({...formData, weekend_day_rate: e.target.value})} />
-                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_night_rate} onChange={(e) => setFormData({...formData, weekend_night_rate: e.target.value})} />
+                            <input type="number" placeholder="Day" className="w-full px-2 py-2 rounded-lg border-2 border-gray-100 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_day_rate} onChange={(e) => setFormData({ ...formData, weekend_day_rate: e.target.value })} />
+                            <input type="number" placeholder="Night" className="w-full px-2 py-2 rounded-lg border-2 border-gray-200 focus:border-green-500 outline-none text-xs font-mono" value={formData.weekend_night_rate} onChange={(e) => setFormData({ ...formData, weekend_night_rate: e.target.value })} />
                           </div>
                         </div>
                       )}
@@ -377,9 +376,9 @@ export default function Signup() {
                         </label>
                       </div>
                       <div className="flex gap-2 items-center bg-gray-50 p-2 rounded-2xl border border-gray-100">
-                        <input type="time" className="flex-1 bg-transparent px-2 text-sm outline-none" value={formData.opening_time} onChange={(e) => setFormData({...formData, opening_time: e.target.value})} />
+                        <input type="time" className="flex-1 bg-transparent px-2 text-sm outline-none" value={formData.opening_time} onChange={(e) => setFormData({ ...formData, opening_time: e.target.value })} />
                         <span className="text-[10px] font-black italic text-gray-300">TO</span>
-                        <input type="time" className="flex-1 bg-transparent px-2 text-sm outline-none" value={formData.closing_time} onChange={(e) => setFormData({...formData, closing_time: e.target.value})} />
+                        <input type="time" className="flex-1 bg-transparent px-2 text-sm outline-none" value={formData.closing_time} onChange={(e) => setFormData({ ...formData, closing_time: e.target.value })} />
                       </div>
                     </div>
                   </div>
@@ -407,11 +406,11 @@ export default function Signup() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">New Password</label>
-                  <input type="password" required placeholder="••••••••" className={`w-full px-4 py-3 rounded-xl border-2 border-gray-200 outline-none transition-all text-sm ${role === 'player' ? 'focus:border-blue-500' : 'focus:border-green-500'}`} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                  <input type="password" required placeholder="••••••••" className={`w-full px-4 py-3 rounded-xl border-2 border-gray-200 outline-none transition-all text-sm ${role === 'player' ? 'focus:border-blue-500' : 'focus:border-green-500'}`} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Confirm Password</label>
-                  <input type="password" required placeholder="••••••••" className={`w-full px-4 py-3 rounded-xl border-2 border-gray-200 outline-none transition-all text-sm ${role === 'player' ? 'focus:border-blue-500' : 'focus:border-green-500'}`} value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} />
+                  <input type="password" required placeholder="••••••••" className={`w-full px-4 py-3 rounded-xl border-2 border-gray-200 outline-none transition-all text-sm ${role === 'player' ? 'focus:border-blue-500' : 'focus:border-green-500'}`} value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -423,7 +422,7 @@ export default function Signup() {
 
           <div className="mt-8 text-center border-t border-gray-100 pt-6">
             <p className="text-gray-500 text-xs">
-              Already a member? 
+              Already a member?
               <Link to="/login" className="text-blue-700 font-bold hover:underline ml-1 uppercase tracking-wider">Login here</Link>
             </p>
           </div>
@@ -443,33 +442,33 @@ export default function Signup() {
               <h3 className="text-2xl font-black italic uppercase tracking-tight">Verify Your Account</h3>
               <p className="text-white/80 text-xs font-bold tracking-widest uppercase mt-1">We sent a 6-digit code to {formData.phone}</p>
             </div>
-            
+
             <form onSubmit={handleVerifyOtp} className="p-8">
               {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-sm text-center font-bold border border-red-100">{error}</div>}
-              
+
               <div className="mb-6">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block text-center">Enter Verification Code</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   maxLength="6"
                   required
                   placeholder="••••••"
                   className="w-full text-center text-3xl font-black tracking-[0.5em] py-4 rounded-2xl border-2 border-gray-100 focus:border-blue-500 outline-none transition-all bg-gray-50"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g,''))}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 />
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSubmitting || otp.length < 6}
                 className={`w-full py-4 rounded-full font-black text-sm text-white shadow-lg transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest ${role === 'player' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 {isSubmitting ? 'Verifying...' : 'Complete Registration'}
               </button>
 
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setIsVerifying(false)}
                 className="w-full mt-4 py-2 text-gray-400 text-[10px] font-bold uppercase tracking-widest hover:text-gray-600 transition"
               >

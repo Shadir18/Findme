@@ -3,6 +3,8 @@ from database.db import db
 from bson.objectid import ObjectId
 import datetime
 
+from routes.player_routes import _court_booking_conflicts, _owner_id_variants
+
 owner_bp = Blueprint('owner_routes', __name__)
 
 @owner_bp.route('/api/owner/dashboard', methods=['GET'])
@@ -178,21 +180,34 @@ def update_court_details(court_id):
 def manual_booking():
     data = request.json
     owner_id = data.get('owner_id')
-    
+    court_name = data.get('courtName', '')
+    date = data.get('date', datetime.datetime.now().strftime("%Y-%m-%d"))
+    time_slot = data.get('timeSlot', '00:00 - 00:00')
+
+    court_doc = None
+    if court_name and owner_id:
+        court_doc = db.courts.find_one({"name": court_name, "owner_id": {"$in": _owner_id_variants(owner_id)}})
+    if court_doc:
+        taken, msg = _court_booking_conflicts(court_doc, owner_id, date, time_slot)
+        if taken:
+            return jsonify({"error": msg}), 409
+
     # Required: Customer Name, Phone, Time Slot, Court, Sport, Date
     new_booking = {
         "owner_id": owner_id,
         "team": data.get('customerName', 'Manual Walk-in'),
         "user_phone": data.get('phoneNumber', ''),
-        "date": data.get('date', datetime.datetime.now().strftime("%Y-%m-%d")),
-        "time": data.get('timeSlot', '00:00 - 00:00'),
-        "court": data.get('courtName', 'Court'),
+        "date": date,
+        "time": time_slot,
+        "court": court_name or 'Court',
         "sport": data.get('sport', 'Unknown'),
         "players": int(data.get('players', 2)),
         "amount": float(data.get('amount', 0)),
         "status": "Confirmed",  # Manual bookings are typically auto-confirmed
         "type": "manual"
     }
+    if court_doc:
+        new_booking["court_id"] = str(court_doc["_id"])
 
     result = db.bookings.insert_one(new_booking)
     new_booking['id'] = str(result.inserted_id)
@@ -236,5 +251,48 @@ def update_owner_profile():
         if 'password' in updated_user: del updated_user['password']
 
         return jsonify({"success": True, "user": updated_user})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@owner_bp.route('/api/owner/courts', methods=['POST'])
+def add_court():
+    try:
+        data = request.json
+        owner_id = data.get('owner_id')
+        if not owner_id:
+            return jsonify({"error": "Owner ID missing"}), 400
+            
+        new_court = {
+            "owner_id": owner_id,
+            "name": data.get('name', 'New Court'),
+            "sport": data.get('sport', 'Futsal'),
+            "capacity": int(data.get('capacity', 10)),
+            "status": "Available",
+            "available": True,
+            "price_per_hour": float(data.get('price_per_hour', 0)) if data.get('price_per_hour') else 0,
+            "pricing": data.get('pricing', None)
+        }
+        
+        result = db.courts.insert_one(new_court)
+        new_court['_id'] = str(result.inserted_id)
+        return jsonify({"success": True, "court": new_court})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@owner_bp.route('/api/owner/courts/bulk-status', methods=['POST'])
+def bulk_update_court_status():
+    try:
+        data = request.json
+        owner_id = data.get('owner_id')
+        new_status = data.get('status', 'Available')
+        
+        if not owner_id:
+            return jsonify({"error": "Owner ID missing"}), 400
+            
+        db.courts.update_many(
+            {"owner_id": owner_id},
+            {"$set": {"status": new_status, "available": new_status == 'Available'}}
+        )
+        return jsonify({"success": True, "status": new_status})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

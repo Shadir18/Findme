@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 export default function Home() {
   return (
     <div className="animate-fadeIn font-sans text-gray-800">
-      
+
       {/* 1. HERO SECTION */}
       <section className="bg-gradient-to-br from-blue-700 to-blue-500 text-white py-24 px-8 text-center shadow-inner">
         <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight">
@@ -26,8 +26,8 @@ export default function Home() {
       <section className="py-16 px-8 max-w-5xl mx-auto text-center">
         <h2 className="text-3xl font-bold text-gray-800 mb-6">Why use Find Me?</h2>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          We know the struggle. You want to play Futsal or Badminton, but your friends are busy. You message WhatsApp groups, wait for replies, and eventually, the plan gets cancelled. 
-          <br/><br/>
+          We know the struggle. You want to play Futsal or Badminton, but your friends are busy. You message WhatsApp groups, wait for replies, and eventually, the plan gets cancelled.
+          <br /><br />
           <strong>Find Me</strong> eliminates the hassle. Tell us what you play and when you are free, and our algorithm instantly matches you with others in your city.
         </p>
       </section>
@@ -39,7 +39,7 @@ export default function Home() {
             <h2 className="text-4xl font-black text-blue-600">For Solo Players</h2>
             <p className="text-gray-500 mt-2 text-lg">Everything you need to get in the game.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
               <div className="text-5xl mb-4">⚡</div>
@@ -81,7 +81,7 @@ export default function Home() {
             <h2 className="text-4xl font-black text-green-600">For Facility Owners</h2>
             <p className="text-gray-500 mt-2 text-lg">Maximize your court bookings with zero manual effort.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <ul className="space-y-6">

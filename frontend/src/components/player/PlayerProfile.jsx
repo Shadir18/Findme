@@ -158,8 +158,8 @@ export default function PlayerProfile({ user, onUpdate }) {
               <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </label>
             {formData.profile_picture && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setFormData({ ...formData, profile_picture: null })}
                 className="absolute bottom-1 -left-2 p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition active:scale-90 border-4 border-white"
               >
@@ -190,7 +190,7 @@ export default function PlayerProfile({ user, onUpdate }) {
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex items-center gap-3">
-             <div className="p-2 bg-blue-50 rounded-xl text-blue-600"><User className="w-4 h-4" /></div>
+            <div className="p-2 bg-blue-50 rounded-xl text-blue-600"><User className="w-4 h-4" /></div>
             <h3 className="font-bold text-gray-900 uppercase tracking-widest text-xs">Account Basics</h3>
           </div>
           <div className="p-8 space-y-5">
@@ -205,8 +205,8 @@ export default function PlayerProfile({ user, onUpdate }) {
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1 mb-1.5 block">Phone Number</label>
               <div className="relative">
-                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                 <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold text-gray-800 focus:border-blue-500 outline-none transition" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold text-gray-800 focus:border-blue-500 outline-none transition" />
               </div>
             </div>
           </div>
@@ -245,9 +245,9 @@ export default function PlayerProfile({ user, onUpdate }) {
         <div className="md:col-span-2 flex flex-col items-center gap-4 py-6">
           {error && <p className="text-red-500 text-xs font-bold bg-red-50 border border-red-100 px-6 py-4 rounded-2xl w-full text-center animate-shake">{error}</p>}
           {success && <p className="text-green-600 text-xs font-bold bg-green-50 border border-green-100 px-6 py-4 rounded-2xl w-full text-center animate-fadeIn">{success}</p>}
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="group w-full md:w-auto min-w-[280px] py-4.5 bg-gray-900 hover:bg-blue-600 text-white rounded-[1.8rem] font-black text-xs uppercase tracking-[0.25em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all duration-300"
           >

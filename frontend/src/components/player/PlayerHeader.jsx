@@ -1,22 +1,18 @@
 import { useState } from 'react';
-import { Bell, Search, ChevronDown, LogOut, User, Settings, X, Check, Calendar, CreditCard, XCircle } from 'lucide-react';
+import { Bell, Search, ChevronDown, LogOut, User, Settings, X, Check, Calendar, CreditCard, XCircle, Sparkles, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const MOCK_NOTIFS = [
-  { id: 1, type: 'booking', message: 'New booking: Smash Bros – Court B, 9:00 AM', time: '5 min ago', unread: true },
-  { id: 2, type: 'cancel', message: 'Cancellation: Village Stars – Court C, Apr 1', time: '1 hr ago', unread: true },
-  { id: 3, type: 'payment', message: 'Payment received – LKR 3,500 from Thunder FC', time: '2 hrs ago', unread: true },
-];
 
 const TypeIcon = ({ type }) => {
   if (type === 'booking') return <div className="p-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg shrink-0 mt-0.5 ring-1 ring-indigo-500/40"><Calendar className="w-4 h-4" /></div>;
   if (type === 'cancel') return <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-lg shrink-0 mt-0.5 ring-1 ring-rose-500/40"><XCircle className="w-4 h-4" /></div>;
+  if (type === 'match') return <div className="p-1.5 bg-fuchsia-500/20 text-fuchsia-400 rounded-lg shrink-0 mt-0.5 ring-1 ring-fuchsia-500/40"><Activity className="w-4 h-4" /></div>;
   return <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0 mt-0.5 ring-1 ring-emerald-500/40"><CreditCard className="w-4 h-4" /></div>;
 };
 
-export default function OwnerHeader({ user, notifications = [], setNotifications, showNotifications, setShowNotifications, searchQuery, setSearchQuery, setActiveTab }) {
+export default function PlayerHeader({ user, notifications = [], onMarkRead, setTab }) {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState(null);
 
   const handleLogout = () => {
@@ -25,62 +21,44 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    notifications.forEach(n => { if (!n.read) onMarkRead(n._id); });
+    setShowNotifications(false);
   };
 
   const handleNotifClick = (n) => {
     setSelectedNotif(n);
-    setNotifications(prev => (prev || []).map(item =>
-      (item.id === n.id || item._id === n._id) ? { ...item, read: true } : item
-    ));
-    setShowNotifications(false); // Close the dropdown when opening the modal
+    if (!n.read) onMarkRead(n._id);
+    setShowNotifications(false);
   };
 
   const unreadCount = (notifications || []).filter(n => !n.read).length;
 
   return (
     <>
-      {/* MODAL MOVED OUTSIDE THE HEADER
-        This ensures the z-[9999] works properly and covers the entire screen,
-        including the sticky header itself.
-      */}
       {selectedNotif && (
         <NotifDetailModal
           notif={selectedNotif}
           onClose={() => {
-            if (selectedNotif.type === 'booking' && setActiveTab) setActiveTab('bookings');
+            if (selectedNotif.type === 'booking' || selectedNotif.type === 'match') setTab('my-activity');
             setSelectedNotif(null);
           }}
         />
       )}
-
       <header className="bg-white/[0.02] backdrop-blur-3xl sticky top-0 z-50 border-b border-white/10">
         <div className="max-w-screen-xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex items-center gap-4 h-16">
 
-            {/* Logo */}
+            {/* Logo (Visible on Mobile/Tablet) */}
             <div className="flex items-center gap-2 shrink-0 lg:hidden">
               <span className="text-2xl font-black text-white tracking-tighter">FIND ME</span>
             </div>
 
             {/* Welcome message */}
-            <div className="hidden md:block shrink-0 ml-3 pl-4 border-l border-white/10">
-              <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-black mb-0.5">Owner Portal</p>
+            <div className="hidden md:block lg:hidden shrink-0 ml-3 pl-4 border-l border-white/10">
+              <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-black mb-0.5">Player Portal</p>
               <p className="text-white font-bold text-sm leading-none">
-                {user?.name?.split(' ')[0]} <span className="text-slate-400 font-medium">· {user?.indoor_name || 'My Indoor'}</span>
+                {user?.name?.split(' ')[0]}
               </p>
-            </div>
-
-            {/* Search */}
-            <div className="flex-1 max-w-sm mx-auto relative hidden sm:block">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search bookings..."
-                value={searchQuery || ''}
-                onChange={e => setSearchQuery && setSearchQuery(e.target.value)}
-                className="w-full bg-[#0A0F1C]/80 border-2 border-white/10 text-white text-sm font-bold rounded-2xl pl-11 pr-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-500 hover:border-white/20 shadow-inner"
-              />
             </div>
 
             <div className="flex items-center gap-4 ml-auto shrink-0">
@@ -172,9 +150,13 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
                   onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }}
                   className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full p-1.5 pr-4 transition-all shadow-sm group active:scale-95"
                 >
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-900 font-black text-xs shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-105 transition-transform">
-                    {user?.name?.[0] || 'O'}
-                  </div>
+                  {user?.profile_picture ? (
+                    <img src={user.profile_picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-105 transition-transform" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-900 font-black text-xs shadow-[0_0_15px_rgba(255,255,255,0.3)] group-hover:scale-105 transition-transform">
+                      {user?.name?.[0] || 'P'}
+                    </div>
+                  )}
                   <span className="text-white text-sm font-black tracking-tight hidden sm:block">{user?.name?.split(' ')[0]}</span>
                   <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors hidden sm:block" />
                 </button>
@@ -185,14 +167,11 @@ export default function OwnerHeader({ user, notifications = [], setNotifications
                   <div className="absolute right-0 top-14 w-64 bg-[#0A0F1C]/95 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden z-50 animate-in slide-in-from-top-4 fade-in duration-200">
                     <div className="px-6 py-5 border-b border-white/5 bg-white/5">
                       <p className="text-white font-black text-lg tracking-tight mb-1">{user?.name}</p>
-                      <p className="text-slate-400 text-xs font-bold">{user?.email || 'owner@findme.lk'}</p>
+                      <p className="text-slate-400 text-xs font-bold">{user?.email || 'player@findme.lk'}</p>
                     </div>
                     <div className="p-2 space-y-1">
-                      <button onClick={() => { if (setActiveTab) setActiveTab('profile'); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-white/5 hover:text-white text-sm font-bold rounded-xl transition-colors">
+                      <button onClick={() => { setTab('profile'); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-white/5 hover:text-white text-sm font-bold rounded-xl transition-colors">
                         <User className="w-4 h-4 text-indigo-400" /> My Profile
-                      </button>
-                      <button onClick={() => { if (setActiveTab) setActiveTab('turfs'); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-slate-300 hover:bg-white/5 hover:text-white text-sm font-bold rounded-xl transition-colors">
-                        <Settings className="w-4 h-4 text-indigo-400" /> Facility Settings
                       </button>
                     </div>
                     <div className="p-2 border-t border-white/5 bg-white/[0.02]">
@@ -216,7 +195,8 @@ function NotifDetailModal({ notif, onClose }) {
   const iconMap = {
     booking: { icon: Calendar, color: 'text-indigo-400', bg: 'bg-indigo-500/20', ring: 'ring-indigo-500/40', shadow: 'shadow-[0_0_20px_rgba(99,102,241,0.4)]' },
     cancel: { icon: XCircle, color: 'text-rose-400', bg: 'bg-rose-500/20', ring: 'ring-rose-500/40', shadow: 'shadow-[0_0_20px_rgba(244,63,94,0.4)]' },
-    payment: { icon: CreditCard, color: 'text-emerald-400', bg: 'bg-emerald-500/20', ring: 'ring-emerald-500/40', shadow: 'shadow-[0_0_20px_rgba(16,185,129,0.4)]' }
+    payment: { icon: CreditCard, color: 'text-emerald-400', bg: 'bg-emerald-500/20', ring: 'ring-emerald-500/40', shadow: 'shadow-[0_0_20px_rgba(16,185,129,0.4)]' },
+    match: { icon: Activity, color: 'text-fuchsia-400', bg: 'bg-fuchsia-500/20', ring: 'ring-fuchsia-500/40', shadow: 'shadow-[0_0_20px_rgba(217,70,239,0.4)]' }
   };
   const theme = iconMap[notif.type] || iconMap.booking;
 
@@ -226,7 +206,6 @@ function NotifDetailModal({ notif, onClose }) {
         className="bg-[#0A0F1C] border border-white/10 rounded-[2.5rem] w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-300 transform transition-all relative"
         onClick={e => e.stopPropagation()}
       >
-        {/* Glow Effects */}
         <div className={`absolute -top-24 -right-24 w-48 h-48 rounded-full blur-[60px] opacity-30 ${theme.bg}`}></div>
         
         <div className="bg-white/5 border-b border-white/10 p-8 flex items-start justify-between relative z-10">

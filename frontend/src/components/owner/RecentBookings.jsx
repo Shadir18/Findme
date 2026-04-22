@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Download, ListFilter } from 'lucide-react';
 
 const STATUS_STYLES = {
-  Confirmed: 'bg-green-50 text-green-700 border-green-200',
-  Pending:   'bg-yellow-50 text-yellow-700 border-yellow-200',
-  Cancelled: 'bg-red-50 text-red-600 border-red-200',
+  Confirmed: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
+  Pending: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
+  Cancelled: 'bg-red-500/10 text-red-400 border border-red-500/30',
 };
 
 export default function RecentBookings({ bookings, compact, onSelect }) {
@@ -20,27 +20,26 @@ export default function RecentBookings({ bookings, compact, onSelect }) {
     .slice(0, compact ? 5 : undefined);
 
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow transition">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-        <h3 className="text-gray-800 font-bold text-base flex items-center gap-2">
+    <section className="bg-white/[0.04] backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.15)] ring-1 ring-white/10 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-all duration-300">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
+        <h3 className="text-white font-black text-lg flex items-center gap-2 tracking-tight">
           {compact ? 'Recent Bookings' : 'Booking History'}
         </h3>
         {!compact && (
-          <div className="flex items-center gap-2">
-            <div className="flex bg-white rounded p-0.5 border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex bg-[#0A0F1C] rounded-[1rem] p-1 border border-white/10 shadow-inner">
               {['7', '30'].map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1 rounded text-xs font-semibold transition ${
-                    filter === f ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 ${filter === f ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   Last {f} days
                 </button>
               ))}
             </div>
-            <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-blue-600 bg-white hover:bg-blue-50 px-3 py-1.5 rounded border border-gray-200 hover:border-blue-200 shadow-sm transition">
+            <button className="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 px-4 py-2 rounded-[1rem] border border-white/10 transition-all duration-300 hover:ring-1 hover:ring-indigo-500/50">
               <Download className="w-3.5 h-3.5" /> Export
             </button>
           </div>
@@ -48,7 +47,7 @@ export default function RecentBookings({ bookings, compact, onSelect }) {
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-12 gap-2 px-5 py-2.5 bg-gray-50/50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+      <div className="grid grid-cols-12 gap-3 px-6 py-3 bg-white/[0.02] border-b border-white/10 text-[10px] font-black text-slate-500 uppercase tracking-widest">
         <div className="col-span-2">Date</div>
         <div className="col-span-2">Time</div>
         <div className="col-span-2">Sport</div>
@@ -58,19 +57,19 @@ export default function RecentBookings({ bookings, compact, onSelect }) {
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-white/5 max-h-96 overflow-y-auto">
         {displayed.length === 0 && (
-          <div className="text-gray-500 text-sm text-center py-8">No bookings found in this range.</div>
+          <div className="text-slate-500 text-sm font-medium text-center py-10 italic">No bookings found in this range.</div>
         )}
         {displayed.map(b => (
-          <div key={b.id} onClick={() => onSelect && onSelect(b)} className="grid grid-cols-12 gap-2 px-5 py-3 hover:bg-blue-50 cursor-pointer transition items-center group">
-            <div className="col-span-2 text-gray-600 text-xs font-semibold">{new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}</div>
-            <div className="col-span-2 text-gray-500 text-xs">{b.time.split(' - ')[0]}</div>
-            <div className="col-span-2 text-gray-700 text-xs truncate">{b.sport}</div>
-            <div className="col-span-3 text-gray-800 text-xs font-semibold truncate">{b.team}</div>
-            <div className="col-span-1 text-gray-600 text-[11px] font-bold text-right">{(b.amount / 1000).toFixed(1)}k</div>
+          <div key={b.id} onClick={() => onSelect && onSelect(b)} className="grid grid-cols-12 gap-3 px-6 py-4 hover:bg-white/5 cursor-pointer transition-all duration-200 items-center group">
+            <div className="col-span-2 text-slate-300 text-xs font-bold group-hover:text-indigo-300">{new Date(b.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+            <div className="col-span-2 text-slate-400 text-xs group-hover:text-white transition-colors">{b.time.split(' - ')[0]}</div>
+            <div className="col-span-2 text-slate-300 text-xs font-medium truncate">{b.sport}</div>
+            <div className="col-span-3 text-white text-sm font-black truncate">{b.team}</div>
+            <div className="col-span-1 text-slate-300 text-[11px] font-bold text-right">{(b.amount / 1000).toFixed(1)}k</div>
             <div className="col-span-2 text-right">
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${STATUS_STYLES[b.status]}`}>
+              <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg ${STATUS_STYLES[b.status]}`}>
                 {b.status}
               </span>
             </div>

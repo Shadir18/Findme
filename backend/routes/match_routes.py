@@ -22,3 +22,21 @@ def get_matches():
         return jsonify(teams), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@match_bp.route('/api/add_player', methods=['POST'])
+def add_player():
+    try:
+        data = request.json
+        if not data.get("name"):
+            return jsonify({"error": "Name is required"}), 400
+            
+        # Add to the legacy players collection used by public MatchGrid
+        db.players.insert_one({
+            "name": data.get("name"),
+            "sport": data.get("sport", "Futsal"),
+            "city": data.get("city", "Colombo"),
+            "time_slot": data.get("time_slot", "Saturday Morning")
+        })
+        return jsonify({"message": "Player added to waitlist!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

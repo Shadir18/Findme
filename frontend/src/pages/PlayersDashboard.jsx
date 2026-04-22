@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Trophy, MapPin, X, Check, Search, Calendar, ChevronDown, User, Activity, Map, Navigation, CheckCircle2, ChevronRight, Goal, Target, Sparkles, Clock, CreditCard, Users as UsersIcon, LogOut, MessageSquare } from 'lucide-react';
+import { Bell, Trophy, MapPin, X, Check, Search, Calendar, ChevronDown, User, Activity, Map, Navigation, CheckCircle2, ChevronRight, Goal, Target, Sparkles, Clock, CreditCard, Users as UsersIcon, LogOut, MessageSquare, Trash2, RefreshCw } from 'lucide-react';
 import PlayerProfile from '../components/player/PlayerProfile';
 import PlayerHeader from '../components/player/PlayerHeader';
 
@@ -362,10 +362,16 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
   }
 
   const slots = [];
+  const formatTime = (h) => {
+    const hh = h % 24;
+    const period = hh >= 12 ? 'PM' : 'AM';
+    let displayH = hh % 12;
+    if (displayH === 0) displayH = 12;
+    return `${String(displayH).padStart(2, '0')}:00 ${period}`;
+  };
+
   for (let h = startHour; h < endHour; h++) {
-    let startH = h % 24;
-    let endH = (h + 1) % 24;
-    slots.push(`${String(startH).padStart(2, '0')}:00 - ${String(endH).padStart(2, '0')}:00`);
+    slots.push(`${formatTime(h)} - ${formatTime(h + 1)}`);
   }
   const rate = Number(turf?.pricing?.weekday?.day || turf?.pricing?.standard || 1500);
 
@@ -431,7 +437,7 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
                         type="button"
                         disabled={isBusy}
                         onClick={() => setSlot(t)}
-                        className={`flex flex-col items-center justify-center p-4 rounded-2xl ring-1 transition-all duration-200 ${isBusy ? 'bg-white/5 ring-white/5 text-slate-500 cursor-not-allowed' :
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl ring-1 transition-all duration-200 ${isBusy ? 'bg-rose-500/10 ring-rose-500/30 text-rose-400/80 cursor-not-allowed' :
                             slot === t ? 'bg-indigo-600 ring-indigo-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.6)] transform scale-105 z-10' :
                               'bg-white/5 ring-white/20 text-slate-200 hover:ring-indigo-400 hover:bg-indigo-500/20 hover:-translate-y-1 hover:shadow-lg'
                           }`}
@@ -443,6 +449,21 @@ function BookingModal({ turf, court, playerId, onClose, onSuccess }) {
                       </button>
                     );
                   })}
+                </div>
+                
+                <div className="flex items-center gap-4 mt-6 ml-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-white/20 ring-1 ring-white/30" />
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                    <span className="text-[10px] font-black uppercase text-indigo-300 tracking-widest">Selected</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                    <span className="text-[10px] font-black uppercase text-rose-400 tracking-widest">Booked</span>
+                  </div>
                 </div>
               </div>
 
@@ -602,21 +623,43 @@ function GroupChatModal({ group, user, onClose }) {
   const [messages, setMessages] = useState([]);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
-  const messagesEndRef = useCallback(node => { if (node) node.scrollIntoView({ behavior: 'smooth' }); }, []);
+  const [sending, setSending] = useState(false);
+  const [sendErr, setSendErr] = useState(null);
+  const [fetchErr, setFetchErr] = useState(null);
+  const scrollRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
 
   // Support two modes:
   //   1. Squad group chat  → group._id is a match_group id  (apiPath = /api/matches/<id>/chat)
   //   2. Direct request chat → group.requestId is a join_request id (apiPath = /api/requests/<id>/chat)
-  const chatPath = group.requestId
-    ? `${API}/api/requests/${group.requestId}/chat`
-    : `${API}/api/matches/${group._id}/chat`;
+  const chatPostPath = group.requestId
+    ? `${API}/api/requests/${encodeURIComponent(group.requestId)}/chat`
+    : `${API}/api/matches/${encodeURIComponent(group._id)}/chat`;
+  const chatGetPath = group.requestId
+    ? `${API}/api/requests/${encodeURIComponent(group.requestId)}/chat?player_id=${encodeURIComponent(user._id)}`
+    : `${API}/api/matches/${encodeURIComponent(group._id)}/chat`;
 
   const fetchChats = useCallback(() => {
-    fetch(chatPath)
-      .then(r => r.json())
-      .then(d => { setMessages(d.messages || []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [chatPath]);
+    return fetch(chatGetPath)
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setMessages([]);
+          setFetchErr(d.error || `Could not load messages (${r.status})`);
+          setLoading(false);
+          return;
+        }
+        setFetchErr(null);
+        setMessages(Array.isArray(d.messages) ? d.messages : []);
+        setLoading(false);
+      })
+      .catch(() => { setMessages([]); setFetchErr('Network error while loading messages.'); setLoading(false); });
+  }, [chatGetPath]);
 
   useEffect(() => {
     fetchChats();
@@ -624,19 +667,36 @@ function GroupChatModal({ group, user, onClose }) {
     return () => clearInterval(interval);
   }, [fetchChats]);
 
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const send = async (e) => {
     e.preventDefault();
-    if (!msg.trim()) return;
-    const txt = msg;
+    if (!msg.trim() || sending) return;
+    const txt = msg.trim();
     setMsg('');
+    setSendErr(null);
+    setSending(true);
     try {
-      await fetch(chatPath, {
+      const r = await fetch(chatPostPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ player_id: user._id, name: user.name, message: txt })
       });
-      fetchChats();
-    } catch {}
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setMsg(txt);
+        setSendErr(d.error || `Message not sent (${r.status}). Try again.`);
+        return;
+      }
+      await fetchChats();
+    } catch {
+      setMsg(txt);
+      setSendErr('Network error. Check your connection and try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const title = group.requestId ? `Chat with ${group.captainName || 'Captain'}` : 'Squad Chat';
@@ -658,14 +718,17 @@ function GroupChatModal({ group, user, onClose }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-[#0A0F1C] flex flex-col custom-scrollbar gap-4">
+        <div className="flex-1 overflow-y-auto p-6 bg-[#0A0F1C] flex flex-col custom-scrollbar gap-4" ref={scrollRef}>
+          {fetchErr && (
+            <div className="text-rose-300 text-center text-xs font-bold bg-rose-500/10 ring-1 ring-rose-500/30 rounded-xl px-4 py-3 shrink-0">{fetchErr}</div>
+          )}
           {loading ? (
              <div className="text-indigo-400 text-center uppercase tracking-widest text-xs font-bold animate-pulse m-auto">Loading...</div>
           ) : messages.length === 0 ? (
              <div className="text-slate-500 text-center m-auto text-sm font-bold tracking-widest uppercase">No messages yet. Say hi! 👋</div>
           ) : (
             messages.map(m => {
-              const isMe = m.player_id === user._id;
+              const isMe = String(m.player_id) === String(user._id);
               return (
                 <div key={m._id} className={`flex flex-col max-w-[80%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
                   <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1 ml-1">{isMe ? 'You' : m.name}</span>
@@ -676,14 +739,16 @@ function GroupChatModal({ group, user, onClose }) {
               );
             })
           )}
-          <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={send} className="p-4 bg-white/5 border-t border-white/10 shrink-0 flex gap-3 items-center relative z-10">
-          <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="Type a message..." className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
-          <button type="submit" disabled={!msg.trim()} className="p-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all">
-            <MessageSquare className="w-5 h-5" />
-          </button>
+        <form onSubmit={send} className="p-4 bg-white/5 border-t border-white/10 shrink-0 flex flex-col gap-2 relative z-10">
+          {sendErr && <p className="text-rose-300 text-xs font-bold">{sendErr}</p>}
+          <div className="flex gap-3 items-center">
+            <input value={msg} onChange={e => { setMsg(e.target.value); setSendErr(null); }} placeholder="Type a message..." className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
+            <button type="submit" disabled={!msg.trim() || sending} className="p-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.4)] transition-all shrink-0">
+              {sending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <MessageSquare className="w-5 h-5" />}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -955,6 +1020,9 @@ function FindMatchesTab({ user }) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [inviteStatus, setInviteStatus] = useState({});
+  const [filtersCompact, setFiltersCompact] = useState(false);
+  const resultsRef = useRef(null);
+  const filtersRef = useRef(null);
 
   const timeBlocks = [
     '06:00 AM - 07:00 AM', '07:00 AM - 08:00 AM', '08:00 AM - 09:00 AM', '09:00 AM - 10:00 AM',
@@ -977,9 +1045,9 @@ function FindMatchesTab({ user }) {
   };
 
   useEffect(() => {
-    if (!loc.district) { setAvailSports([]); setFS(''); setPlayers([]); setSearched(false); return; }
+    if (!loc.district) { setAvailSports([]); setFS(''); setPlayers([]); setSearched(false); setFiltersCompact(false); return; }
     const fetchSports = async () => {
-      setLS(true); setFS(''); setPlayers([]); setSearched(false);
+      setLS(true); setFS(''); setPlayers([]); setSearched(false); setFiltersCompact(false);
       try {
         const p = new URLSearchParams({ district: loc.district });
         if (loc.province) p.append('province', loc.province);
@@ -1029,7 +1097,16 @@ function FindMatchesTab({ user }) {
       setPlayers(matchingPlayers);
     } catch { setPlayers([]); }
     setLoading(false);
+    setFiltersCompact(true);
   }, [loc.district, loc.town, fSport, user._id, date, timeSlots, lookingFor]);
+
+  useEffect(() => {
+    if (!searched || loading) return;
+    const t = window.setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    return () => window.clearTimeout(t);
+  }, [searched, loading]);
 
   const invitePlayer = async (pid) => {
     setInviteStatus(s => ({ ...s, [pid]: 'Sending...' }));
@@ -1045,15 +1122,65 @@ function FindMatchesTab({ user }) {
 
   const sportIcons = { Futsal: <Activity className="w-8 h-8" />, Football: <Target className="w-8 h-8" />, 'Indoor Cricket': <Trophy className="w-8 h-8" />, Badminton: <Navigation className="w-8 h-8" />, Basketball: <Goal className="w-8 h-8" />, Tennis: <CheckCircle2 className="w-8 h-8" /> };
 
+  const areaSummary = locType === 'default'
+    ? (user?.address?.town || user?.address?.district || 'Your area')
+    : (loc.town || loc.district || 'Area');
+  let dateSummary = '';
+  if (date) {
+    try {
+      const [y, m, d] = date.split('-').map(Number);
+      if (y && m && d) dateSummary = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch { dateSummary = ''; }
+  }
+  const timeSummary = timeSlots.length ? formatTimeSlots(timeSlots.join(', ')) : '';
+
   return (
     <div className="space-y-5 animate-in fade-in duration-700 pb-8">
       <SectionHeader title={lookingFor === 'players' ? "Find Free Agents" : "Find Opponent Teams"} right={searched ? `${players.length} Found` : 'Scout Network'} icon={Search} />
 
       <div className="bg-white/5 p-1.5 rounded-[1.5rem] ring-1 ring-white/10 flex gap-2 max-w-sm w-full mb-2">
-        <button onClick={() => { setLookingFor('players'); setSearched(false); setPlayers([]); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'players' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>🔍 Scout Players</button>
-        <button onClick={() => { setLookingFor('teams'); setSearched(false); setPlayers([]); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'teams' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>⚔️ Challenge Squads</button>
+        <button onClick={() => { setLookingFor('players'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'players' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>🔍 Scout Players</button>
+        <button onClick={() => { setLookingFor('teams'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'teams' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>⚔️ Challenge Squads</button>
       </div>
 
+      {filtersCompact && searched && fSport && (
+        <div className="sticky top-2 z-10 bg-[#0A0F1C]/90 backdrop-blur-xl border border-white/10 rounded-[2rem] p-4 sm:p-5 shadow-[0_8px_40px_rgba(0,0,0,0.45)] ring-1 ring-indigo-500/30 flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Results for your search</p>
+            <p className="text-white font-bold text-sm sm:text-base leading-snug break-words">
+              <span className="text-indigo-200 font-black uppercase text-[10px] tracking-wider">{fSport}</span>
+              <span className="text-slate-300"> · {areaSummary}</span>
+              {dateSummary ? <span className="text-slate-400 font-semibold"> · {dateSummary}</span> : null}
+              {timeSummary ? <span className="text-slate-400 font-semibold"> · {timeSummary}</span> : null}
+            </p>
+            <p className="text-slate-500 text-xs font-semibold">
+              {loading ? 'Searching the network…' : `${players.length} ${lookingFor === 'players' ? 'player' : 'team'}${players.length !== 1 ? 's' : ''} found`}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => searchPlayers()}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-white/10 hover:bg-white/15 text-white ring-1 ring-white/20 disabled:opacity-50 transition-colors"
+            >
+              {loading ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => { setFiltersCompact(false); window.setTimeout(() => filtersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120); }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white ring-1 ring-indigo-400/50 transition-colors"
+            >
+              <ChevronDown className="w-4 h-4" />
+              Edit search
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!(filtersCompact && searched && fSport) && (
+      <div ref={filtersRef} className="space-y-5">
       <div className="bg-white/[0.04] backdrop-blur-2xl p-6 sm:p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.15)] ring-1 ring-white/10 flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="flex-1 w-full">
           <label className={lbl}>1. Search Location</label>
@@ -1140,17 +1267,27 @@ function FindMatchesTab({ user }) {
           </button>
         </div>
       )}
+      </div>
+      )}
 
-      {searched && !loading && players.length === 0 && (
+      <div ref={resultsRef} id="find-matches-results" className="scroll-mt-24 sm:scroll-mt-28 space-y-5 min-h-[4rem]">
+        {loading && searched && filtersCompact && (
+          <div className="flex flex-col items-center justify-center gap-4 py-16 rounded-[2rem] bg-white/[0.03] ring-1 ring-white/10 animate-in fade-in duration-300">
+            <div className="w-12 h-12 border-[3px] border-indigo-500/30 border-t-indigo-400 rounded-full animate-spin" />
+            <p className="text-slate-300 text-sm font-bold">Searching for matches…</p>
+            <p className="text-slate-500 text-xs font-medium">Hang tight while we scan the network</p>
+          </div>
+        )}
+        {!(loading && searched && filtersCompact) && searched && !loading && players.length === 0 && (
         <div className="bg-white/[0.04] backdrop-blur-2xl rounded-[2rem] shadow-sm ring-1 ring-white/10 py-16 text-center animate-in slide-in-from-bottom-4 duration-500">
           <div className="w-20 h-20 bg-white/5 ring-1 ring-white/10 rounded-full flex items-center justify-center mx-auto mb-5"><UsersIcon className="w-8 h-8 text-slate-400" /></div>
           <p className="text-white text-xl font-black tracking-tight mb-2">No {lookingFor === 'players' ? 'free agents' : 'opposing squads'} found.</p>
           <p className="text-slate-400 text-sm">No one is currently available for {fSport} at this specific time and area.</p>
         </div>
-      )}
+        )}
 
-      {players.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both mt-6">
+        {!(loading && searched && filtersCompact) && players.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both mt-2">
           {players.map(p => (
             <div key={p.player_id} className="bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.15)] ring-1 ring-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-5 hover:ring-indigo-500/50 hover:shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all duration-300 group">
               <div className="flex items-center gap-5 min-w-0">
@@ -1158,8 +1295,8 @@ function FindMatchesTab({ user }) {
                 <div className="min-w-0">
                   <h4 className="text-white font-black text-xl tracking-tight leading-tight truncate">{p.name}</h4>
                   <p className="text-slate-300 text-sm font-semibold mt-1.5 flex items-center gap-1.5 truncate"><MapPin className="w-3 h-3 text-slate-400 shrink-0" /> {p.sport} • {p.area}</p>
-                  <div className="mt-3">
-                    <span className="bg-indigo-500/20 ring-1 ring-indigo-500/40 text-indigo-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 truncate max-w-full"><Clock className="w-3 h-3 shrink-0" /> Match Found!</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="bg-indigo-500/20 ring-1 ring-indigo-500/40 text-indigo-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5"><Clock className="w-3 h-3 shrink-0" /> {formatTimeSlots(p.preferred_time) || 'Anytime'}</span>
                   </div>
                 </div>
               </div>
@@ -1174,7 +1311,8 @@ function FindMatchesTab({ user }) {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -1323,33 +1461,48 @@ function ChatsTab({ user, onChat }) {
   const [sent, setSent] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchAll = useCallback(async () => {
+    try {
+      const [gRes, rRes, sRes] = await Promise.all([
+        fetch(`${API}/api/player/matches/${user._id}`).then(r => r.json()),
+        fetch(`${API}/api/players/requests?player_id=${user._id}`).then(r => r.json()),
+        fetch(`${API}/api/players/sent-requests?player_id=${user._id}`).then(r => r.json()),
+      ]);
+      const chatGroups = (gRes.groups || []).filter(g => {
+        if (['cancelled','completed','expired'].includes(g.status)) return false;
+        const myEntry = (g.players || []).find(p => p.player_id === user._id);
+        return myEntry?.paid || g.created_by === user._id;
+      });
+      setSquadGroups(chatGroups);
+      setReceived(rRes.requests || []);
+      setSent(sRes.requests || []);
+    } catch {}
+    setLoading(false);
+  }, [user._id]);
+
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [gRes, rRes, sRes] = await Promise.all([
-          fetch(`${API}/api/player/matches/${user._id}`).then(r => r.json()),
-          fetch(`${API}/api/players/requests?player_id=${user._id}`).then(r => r.json()),
-          fetch(`${API}/api/players/sent-requests?player_id=${user._id}`).then(r => r.json()),
-        ]);
-        const chatGroups = (gRes.groups || []).filter(g => {
-          if (['cancelled','completed','expired'].includes(g.status)) return false;
-          const myEntry = (g.players || []).find(p => p.player_id === user._id);
-          return myEntry?.paid || g.created_by === user._id;
-        });
-        setSquadGroups(chatGroups);
-        setReceived(rRes.requests || []);
-        setSent(sRes.requests || []);
-      } catch {}
-      setLoading(false);
-    };
     fetchAll();
     const id = setInterval(fetchAll, 10000);
     return () => clearInterval(id);
-  }, [user._id]);
+  }, [fetchAll]);
+
+  const handleDelete = async (reqId) => {
+    if (!window.confirm("Permanently delete this chat and request for both players? This cannot be undone.")) return;
+    try {
+      const r = await fetch(`${API}/api/players/requests/${reqId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: user._id })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) fetchAll();
+      else alert(d.error || 'Failed to delete');
+    } catch { alert('Network error'); }
+  };
 
   const allEmpty = !loading && squadGroups.length === 0 && received.length === 0 && sent.length === 0;
 
-  const RequestRow = ({ req, isSent }) => {
+  const RequestRow = ({ req, isSent, onDelete }) => {
     const otherName = isSent ? (req.to_name || 'Player') : req.from_name;
     const statusKey = (req.status || 'pending').replace('d','').toLowerCase();
     const badgeClass = statusColor[req.status] || statusColor.pending;
@@ -1366,17 +1519,26 @@ function ChatsTab({ user, onChat }) {
           </div>
           <p className="text-slate-400 text-xs font-medium truncate">{req.sport} · {req.area}</p>
         </div>
-        <button
-          onClick={() => onChat({
-            requestId: req._id,
-            captainName: isSent ? (req.to_name || 'Player') : req.from_name,
-            sport: req.sport,
-            area: req.area
-          })}
-          className="shrink-0 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 ring-1 ring-indigo-500/40 rounded-xl transition-all flex items-center gap-2 active:scale-95"
-        >
-          <MessageSquare className="w-4 h-4" /> Chat
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => onChat({
+              requestId: req._id,
+              captainName: isSent ? (req.to_name || 'Player') : req.from_name,
+              sport: req.sport,
+              area: req.area
+            })}
+            className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30 ring-1 ring-indigo-500/40 rounded-xl transition-all flex items-center gap-2 active:scale-95"
+          >
+            <MessageSquare className="w-4 h-4" /> Chat
+          </button>
+          <button
+            onClick={() => onDelete(req._id)}
+            className="p-2.5 text-slate-500 hover:text-rose-400 bg-white/5 hover:bg-rose-500/10 ring-1 ring-white/10 hover:ring-rose-500/30 rounded-xl transition-all active:scale-95"
+            title="Delete Chat"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   };
@@ -1424,7 +1586,7 @@ function ChatsTab({ user, onChat }) {
             <div>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Received Invites</p>
               <div className="bg-white/[0.04] backdrop-blur-2xl ring-1 ring-white/10 rounded-[2rem] divide-y divide-white/5 overflow-hidden">
-                {received.map(req => <RequestRow key={req._id} req={req} isSent={false} />)}
+                {received.map(req => <RequestRow key={req._id} req={req} isSent={false} onDelete={handleDelete} />)}
               </div>
             </div>
           )}
@@ -1434,7 +1596,7 @@ function ChatsTab({ user, onChat }) {
             <div>
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Sent Requests</p>
               <div className="bg-white/[0.04] backdrop-blur-2xl ring-1 ring-white/10 rounded-[2rem] divide-y divide-white/5 overflow-hidden">
-                {sent.map(req => <RequestRow key={req._id} req={req} isSent={true} />)}
+                {sent.map(req => <RequestRow key={req._id} req={req} isSent={true} onDelete={handleDelete} />)}
               </div>
             </div>
           )}

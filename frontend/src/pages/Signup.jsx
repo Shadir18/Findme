@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Target, ArrowRight, Upload, Trash2 } from 'lucide-react';
 
 const sriLankaData = {
   "Western": {
@@ -198,27 +199,41 @@ export default function Signup() {
     }
   };
 
+  const inputCls = "w-full px-4 py-3.5 bg-[#0A0F1C]/80 border-2 border-white/10 hover:border-white/20 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:bg-[#0A0F1C] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all duration-300";
+  const labelCls = "text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1 mb-1.5 block";
+  const sectionCls = "text-xs font-black text-slate-500 uppercase tracking-widest border-b border-white/10 pb-2 mb-4";
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12 animate-fadeIn font-sans">
-      <div className={`w-full transition-all duration-500 ${role === 'player' ? 'max-w-xl' : 'max-w-3xl'}`}>
+    <div className="min-h-screen flex items-center justify-center p-4 py-16 animate-fadeIn font-sans relative z-10">
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40rem] h-[40rem] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-        <div className={`rounded-t-[2.5rem] p-8 text-center shadow-lg transition-colors duration-500 ${role === 'player' ? 'bg-gradient-to-br from-blue-700 to-blue-500' : 'bg-gradient-to-br from-green-700 to-green-500'}`}>
-          <h2 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">
-            {role === 'player' ? <>JOIN THE <span className="text-yellow-300">SQUAD</span></> : <>LIST YOUR <span className="text-yellow-300">INDOOR</span></>}
-          </h2>
-          <p className="text-white/80 text-sm mt-2 font-light uppercase tracking-widest">
-            {role === 'player' ? 'Create your elite player profile' : 'Professional Indoor Management Portal'}
-          </p>
-        </div>
+      <div className={`w-full transition-all duration-500 relative z-10 ${role === 'player' ? 'max-w-xl' : 'max-w-3xl'}`}>
 
-        <div className="bg-white p-8 md:p-10 rounded-b-[2.5rem] shadow-xl border-x border-b border-gray-100">
-
-          <div className="flex bg-gray-100 rounded-full p-1 mb-8 shadow-inner max-w-sm mx-auto">
-            <button type="button" onClick={() => setRole('player')} className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded-full transition-all ${role === 'player' ? 'bg-white text-blue-700 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}>Player</button>
-            <button type="button" onClick={() => setRole('turf_owner')} className={`flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded-full transition-all ${role === 'turf_owner' ? 'bg-white text-green-700 shadow-md' : 'text-gray-400 hover:text-gray-600'}`}>Turf Owner</button>
+        <div className="bg-[#0A0F1C] border border-white/10 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden">
+          {/* Header */}
+          <div className="bg-white/5 border-b border-white/10 p-8 text-center relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-[60px]"></div>
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center mb-3 ring-1 ring-indigo-500/40">
+                <Target className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight uppercase">
+                {role === 'player' ? <>Join the <span className="text-indigo-400">Squad</span></> : <>List Your <span className="text-emerald-400">Indoor</span></>}
+              </h2>
+              <p className="text-slate-400 text-xs mt-2 font-bold uppercase tracking-widest">
+                {role === 'player' ? 'Create your elite player profile' : 'Professional Indoor Management Portal'}
+              </p>
+            </div>
           </div>
 
-          {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-sm text-center font-bold border border-red-100">{error}</div>}
+          <div className="p-8 md:p-10">
+
+            <div className="flex bg-white/5 rounded-full p-1.5 mb-8 shadow-inner max-w-sm mx-auto ring-1 ring-white/10">
+              <button type="button" onClick={() => setRole('player')} className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-full transition-all ${role === 'player' ? 'bg-white text-slate-900 shadow-[0_0_15px_rgba(255,255,255,0.2)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>Player</button>
+              <button type="button" onClick={() => setRole('turf_owner')} className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-full transition-all ${role === 'turf_owner' ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>Turf Owner</button>
+            </div>
+
+            {error && <div className="bg-rose-500/10 text-rose-300 p-4 rounded-2xl mb-6 text-sm text-center font-bold border border-rose-500/30 flex items-center justify-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>{error}</div>}
 
           <form onSubmit={handleRegister} className="space-y-8">
 

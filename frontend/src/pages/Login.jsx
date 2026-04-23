@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { Link, useNavigate } from 'react-router-dom';
+import { Target, ArrowRight } from 'lucide-react';
+
+const lbl = 'block text-[11px] font-black text-indigo-300 uppercase tracking-widest mb-2 ml-1';
+const inp = 'w-full px-5 py-4 bg-[#0A0F1C]/80 border-2 border-white/10 hover:border-white/20 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:bg-[#0A0F1C] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all duration-300 shadow-inner';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate(); // The tool we use to teleport users
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,18 +25,15 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      
+
       if (response.ok) {
-        // Save the user data to the browser's vault
-        // Clear migrating localStorage state to prevent legacy conflicts
         localStorage.removeItem('user');
         sessionStorage.setItem('user', JSON.stringify(data));
-        
-        // --- THIS IS THE NEW SMART ROUTING! ---
+
         if (data.role === 'turf_owner') {
-          navigate('/owner-dashboard'); // Send owners to their command center
+          navigate('/owner-dashboard');
         } else {
-          navigate('/dashboard'); // Send players to the turf finder
+          navigate('/dashboard');
         }
       } else {
         setError(data.error || "Login failed");
@@ -45,79 +46,94 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 py-12 px-4 animate-fadeIn">
-      {/* Login Container */}
-      <div className="w-full max-w-md">
-        
-        {/* Card Header (Matching your Hero gradient) */}
-        <div className="bg-gradient-to-br from-blue-700 to-blue-500 rounded-t-[2.5rem] p-10 text-center shadow-lg relative z-10">
-          <h2 className="text-4xl font-black text-white tracking-tight italic uppercase">
-            Sign <span className="text-yellow-300">In</span>
-          </h2>
-          <p className="text-blue-100 mt-2 font-light">
-            Back to the squad. Ready to play?
-          </p>
-        </div>
+    <div className="min-h-[85vh] flex items-center justify-center py-16 px-4 animate-fadeIn relative z-10">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
-        {/* Form Body */}
-        <div className="bg-white p-10 rounded-b-[2.5rem] shadow-xl border-x border-b border-gray-100 -mt-2">
-          
-          {/* Error Message Display */}
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-sm text-center font-bold border border-red-100">
-              {error}
-            </div>
-          )}
+      <div className="w-full max-w-md relative z-10">
+        {/* Card */}
+        <div className="bg-[#0A0F1C] border border-white/10 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden">
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-bold text-blue-900 mb-2 ml-1">Email Address</label>
-              <input 
-                type="email" 
-                required 
-                placeholder="player@findme.lk"
-                className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 outline-none focus:border-blue-500 transition-all text-gray-800 placeholder:text-gray-400"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+          {/* Header */}
+          <div className="bg-white/5 border-b border-white/10 p-10 text-center relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-[60px]"></div>
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center mb-4 ring-1 ring-indigo-500/40">
+                <Target className="w-7 h-7" />
+              </div>
+              <h2 className="text-3xl font-black text-white tracking-tight">
+                Welcome Back
+              </h2>
+              <p className="text-slate-400 mt-2 text-sm font-medium">
+                Sign in to your squad
+              </p>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-bold text-blue-900 mb-2 ml-1">Password</label>
-              <input 
-                type="password" 
-                required 
-                placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border-2 border-gray-200 outline-none focus:border-blue-500 transition-all text-gray-800 placeholder:text-gray-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex justify-end -mt-3 pb-2">
-              <Link to="/forgot-password" size="sm" className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-800 transition-colors">
-                Forgot Password?
+          {/* Form Body */}
+          <div className="p-8 sm:p-10">
+            {error && (
+              <div className="bg-rose-500/10 text-rose-300 p-4 rounded-2xl mb-6 text-sm text-center font-bold border border-rose-500/30 flex items-center justify-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label className={lbl}>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="player@findme.lk"
+                  className={inp}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className={lbl}>Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  className={inp}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end -mt-2">
+                <Link to="/forgot-password" className="text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Forgot Password?
+                </Link>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-white disabled:opacity-70 text-slate-900 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 transition shadow-[0_0_25px_rgba(255,255,255,0.2)] active:scale-[0.98] flex items-center justify-center gap-2 group"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-4 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 text-center">
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-2">Don't have an account yet?</p>
+              <Link
+                to="/signup"
+                className="text-indigo-400 font-black hover:text-indigo-300 transition-colors uppercase tracking-wider text-xs inline-flex items-center gap-1"
+              >
+                Create Your Profile <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-blue-600 disabled:bg-blue-400 text-white py-4 rounded-full font-bold text-lg hover:bg-blue-700 transition shadow-lg transform hover:-translate-y-1 active:scale-95"
-            >
-              {loading ? 'AUTHENTICATING...' : 'LOGIN TO FINDME'}
-            </button>
-          </form>
-
-          {/* Footer Action */}
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-sm mb-2">Don't have an account yet?</p>
-            <Link 
-              to="/signup" 
-              className="text-blue-700 font-black hover:text-blue-500 transition-colors uppercase tracking-wider text-sm inline-block"
-            >
-              Create Your Player Profile →
-            </Link>
           </div>
         </div>
       </div>

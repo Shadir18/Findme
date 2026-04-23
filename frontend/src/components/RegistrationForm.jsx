@@ -18,13 +18,13 @@ export default function RegistrationForm({ onPlayerAdded }) {
       });
       const data = await response.json();
       if (data.message) {
-        setStatus("✅ You are in the matchmaking pool!");
+        setStatus("You are in the matchmaking pool!");
         setName('');
         onPlayerAdded(); 
         setTimeout(() => setStatus(''), 3000);
       }
     } catch (error) {
-      setStatus("❌ Error connecting to server");
+      setStatus("Error connecting to server");
     }
   };
 

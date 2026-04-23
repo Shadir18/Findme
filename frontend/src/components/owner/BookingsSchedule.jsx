@@ -172,7 +172,7 @@ export default function BookingsSchedule({
                                   <span className={`relative inline-flex rounded-full h-2 w-2 ${isOnline ? 'bg-emerald-500' : isMaintenance ? 'bg-amber-500' : 'bg-amber-500'}`}></span>
                                 </span>
                                 <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 truncate ${isOnline ? 'text-emerald-400' : isMaintenance ? 'text-amber-500' : 'text-amber-400'}`}>
-                                  {isOnline ? '✅ PAID · ONLINE' : isMaintenance ? '🛠️ MAINTENANCE' : (slotBooking.status || 'Booked')}
+                                  {isOnline ? 'PAID · ONLINE' : isMaintenance ? 'MAINTENANCE' : (slotBooking.status || 'Booked')}
                                 </p>
                                 <p className="text-sm text-white font-black truncate leading-tight tracking-wide">
                                   {slotBooking.customerName || slotBooking.team || 'Player'}

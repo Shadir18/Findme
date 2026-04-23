@@ -19,7 +19,6 @@ export default function Navbar() {
 
       <div className="space-x-2 md:space-x-4 font-bold text-sm flex items-center">
         <Link to="/" className="text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-xl hover:bg-white/5">Home</Link>
-        <Link to="/find-match" className="text-slate-400 hover:text-white transition-colors px-3 py-2 rounded-xl hover:bg-white/5">Find a Match</Link>
 
         {user ? (
           <div className="flex items-center space-x-3 border-l border-white/10 pl-4 ml-2">

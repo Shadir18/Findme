@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Trophy, MapPin, X, Check, Search, Calendar, ChevronDown, User, Activity, Map, Navigation, CheckCircle2, ChevronRight, Goal, Target, Sparkles, Clock, CreditCard, Users as UsersIcon, LogOut, MessageSquare, Trash2, RefreshCw } from 'lucide-react';
+import { Bell, Trophy, MapPin, X, Check, Search, Calendar, ChevronDown, User, Activity, Map, Navigation, CheckCircle2, ChevronRight, Goal, Target, Sparkles, Clock, CreditCard, Users as UsersIcon, LogOut, MessageSquare, Trash2, RefreshCw, Phone } from 'lucide-react';
 import PlayerProfile from '../components/player/PlayerProfile';
 import PlayerHeader from '../components/player/PlayerHeader';
 
@@ -725,7 +725,7 @@ function GroupChatModal({ group, user, onClose }) {
           {loading ? (
              <div className="text-indigo-400 text-center uppercase tracking-widest text-xs font-bold animate-pulse m-auto">Loading...</div>
           ) : messages.length === 0 ? (
-             <div className="text-slate-500 text-center m-auto text-sm font-bold tracking-widest uppercase">No messages yet. Say hi! 👋</div>
+             <div className="text-slate-500 text-center m-auto text-sm font-bold tracking-widest uppercase">No messages yet. Say hi!</div>
           ) : (
             messages.map(m => {
               const isMe = String(m.player_id) === String(user._id);
@@ -761,7 +761,7 @@ function MatchCard({ group, playerId, onJoin, onPay, onTeam, onChat, onLeave, mi
   const inGroup = (group.players || []).some(p => p.player_id === playerId);
   const myEntry = (group.players || []).find(p => p.player_id === playerId);
   const full = (group.player_count || 0) >= cap;
-  const sportIcons = { Futsal: <Activity className="w-8 h-8" />, Football: <Target className="w-8 h-8" />, 'Indoor Cricket': <Trophy className="w-8 h-8" />, Badminton: <Navigation className="w-8 h-8" />, Basketball: <Goal className="w-8 h-8" />, Tennis: <CheckCircle2 className="w-8 h-8" /> };
+  const sportAbbr = { Futsal: 'FS', Football: 'FB', 'Indoor Cricket': 'CR', Badminton: 'BD', Basketball: 'BK', Tennis: 'TE' };
 
   return (
     <div className="bg-white/[0.04] backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_20px_40px_-15px_rgba(99,102,241,0.3)] ring-1 ring-white/10 hover:ring-indigo-500/50 transition-all duration-500 group hover:-translate-y-1.5 relative overflow-hidden flex flex-col h-full">
@@ -769,7 +769,7 @@ function MatchCard({ group, playerId, onJoin, onPay, onTeam, onChat, onLeave, mi
 
       <div className="relative z-10 flex items-start justify-between gap-4 mb-8">
         <div className="flex items-center gap-5">
-          <div className="w-16 h-16 rounded-[1.25rem] bg-indigo-500/20 ring-1 ring-indigo-500/40 text-indigo-300 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-lg group-hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] group-hover:-rotate-6">{sportIcons[group.sport] || <Trophy className="w-8 h-8" />}</div>
+          <div className="w-16 h-16 rounded-[1.25rem] bg-indigo-500/20 ring-1 ring-indigo-500/40 text-indigo-300 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-lg group-hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] group-hover:-rotate-6"><span className="text-xl font-black tracking-tighter">{sportAbbr[group.sport] || 'SP'}</span></div>
           <div>
             <p className="text-white font-black text-2xl tracking-tight leading-none mb-2">{group.sport}</p>
             <p className="text-slate-300 text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-indigo-400" /> {group.area}</p>
@@ -812,7 +812,7 @@ function PreferencesTab({ user, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
-  const sportIcons = { Futsal: <Activity className="w-8 h-8" />, Football: <Target className="w-8 h-8" />, 'Indoor Cricket': <Trophy className="w-8 h-8" />, Badminton: <Navigation className="w-8 h-8" />, Basketball: <Goal className="w-8 h-8" />, Tennis: <CheckCircle2 className="w-8 h-8" /> };
+  const sportAbbr = { Futsal: 'FS', Football: 'FB', 'Indoor Cricket': 'CR', Badminton: 'BD', Basketball: 'BK', Tennis: 'TE' };
 
   const [availSports, setAvailSports] = useState([]);
   const [loadingSports, setLS] = useState(false);
@@ -901,8 +901,8 @@ function PreferencesTab({ user, onSaved }) {
           <p className="text-slate-400 text-xs leading-relaxed">Are you looking to join a game as a free agent, or do you have a full squad actively seeking an opponent?</p>
         </div>
         <div className="relative z-10 flex gap-2 w-full md:w-auto mt-2 md:mt-0 p-1.5 bg-white/5 rounded-2xl ring-1 ring-white/10">
-          <button onClick={() => setPrefs(p => ({ ...p, isTeam: false }))} className={`flex-1 md:flex-none px-6 py-3.5 rounded-[1.1rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${!prefs.isTeam ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>👤 Individual Player</button>
-          <button onClick={() => setPrefs(p => ({ ...p, isTeam: true }))} className={`flex-1 md:flex-none px-6 py-3.5 rounded-[1.1rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${prefs.isTeam ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>🛡️ Full Squad</button>
+          <button onClick={() => setPrefs(p => ({ ...p, isTeam: false }))} className={`flex-1 md:flex-none px-6 py-3.5 rounded-[1.1rem] text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 ${!prefs.isTeam ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><User className="w-4 h-4" /> Individual Player</button>
+          <button onClick={() => setPrefs(p => ({ ...p, isTeam: true }))} className={`flex-1 md:flex-none px-6 py-3.5 rounded-[1.1rem] text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 ${prefs.isTeam ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><UsersIcon className="w-4 h-4" /> Full Squad</button>
         </div>
       </div>
 
@@ -963,7 +963,7 @@ function PreferencesTab({ user, onSaved }) {
               {availSports.map(s => (
                 <button key={s} onClick={() => setPrefs(p => ({ ...p, sport: s }))} className={`group relative flex flex-col items-center gap-3 py-5 px-2 rounded-2xl ring-1 transition-all duration-300 overflow-hidden ${prefs.sport === s ? 'ring-indigo-500 bg-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.3)] transform scale-105' : 'ring-white/10 bg-white/5 hover:bg-white/10 hover:ring-white/30 hover:shadow-xl'}`}>
                   {prefs.sport === s && <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/30 to-transparent"></div>}
-                  <span className={`relative z-10 p-3 rounded-2xl transition-all duration-300 ${prefs.sport === s ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-white/10 text-slate-300 group-hover:text-indigo-300 group-hover:bg-indigo-500/20'}`}>{sportIcons[s] || <Trophy className="w-5 h-5"/>}</span>
+                  <span className={`relative z-10 p-3 rounded-2xl transition-all duration-300 ${prefs.sport === s ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-white/10 text-slate-300 group-hover:text-indigo-300 group-hover:bg-indigo-500/20'}`}><span className="text-xs font-black tracking-tighter">{sportAbbr[s] || 'SP'}</span></span>
                   <span className={`relative z-10 text-[11px] font-black uppercase tracking-wider text-center leading-none ${prefs.sport === s ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{s}</span>
                 </button>
               ))}
@@ -1120,7 +1120,7 @@ function FindMatchesTab({ user }) {
     } catch { setInviteStatus(s => ({ ...s, [pid]: 'Error' })); }
   };
 
-  const sportIcons = { Futsal: <Activity className="w-8 h-8" />, Football: <Target className="w-8 h-8" />, 'Indoor Cricket': <Trophy className="w-8 h-8" />, Badminton: <Navigation className="w-8 h-8" />, Basketball: <Goal className="w-8 h-8" />, Tennis: <CheckCircle2 className="w-8 h-8" /> };
+  const sportAbbr = { Futsal: 'FS', Football: 'FB', 'Indoor Cricket': 'CR', Badminton: 'BD', Basketball: 'BK', Tennis: 'TE' };
 
   const areaSummary = locType === 'default'
     ? (user?.address?.town || user?.address?.district || 'Your area')
@@ -1139,8 +1139,8 @@ function FindMatchesTab({ user }) {
       <SectionHeader title={lookingFor === 'players' ? "Find Free Agents" : "Find Opponent Teams"} right={searched ? `${players.length} Found` : 'Scout Network'} icon={Search} />
 
       <div className="bg-white/5 p-1.5 rounded-[1.5rem] ring-1 ring-white/10 flex gap-2 max-w-sm w-full mb-2">
-        <button onClick={() => { setLookingFor('players'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'players' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>🔍 Scout Players</button>
-        <button onClick={() => { setLookingFor('teams'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 ${lookingFor === 'teams' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>⚔️ Challenge Squads</button>
+        <button onClick={() => { setLookingFor('players'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 ${lookingFor === 'players' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Search className="w-4 h-4" /> Scout Players</button>
+        <button onClick={() => { setLookingFor('teams'); setSearched(false); setPlayers([]); setFiltersCompact(false); }} className={`flex-1 py-4 rounded-[1.2rem] text-xs font-black tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 ${lookingFor === 'teams' ? 'bg-white text-slate-900 shadow-[0_0_20px_rgba(255,255,255,0.4)] transform scale-[1.02]' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Target className="w-4 h-4" /> Challenge Squads</button>
       </div>
 
       {filtersCompact && searched && fSport && (
@@ -1233,7 +1233,7 @@ function FindMatchesTab({ user }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 relative z-10">
               {availSports.map(s => (
                 <button key={s} onClick={() => setFS(s)} className={`group flex flex-col items-center gap-3 py-5 px-2 rounded-2xl ring-1 transition-all duration-300 ${fSport === s ? 'ring-indigo-500 bg-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.4)] transform scale-105' : 'ring-white/10 bg-white/5 hover:bg-white/10 hover:ring-white/30'}`}>
-                  <span className={`p-3 rounded-2xl transition-colors ${fSport === s ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-white/10 text-slate-300 group-hover:text-indigo-400 group-hover:bg-indigo-500/20'}`}>{sportIcons[s] ? <div className="scale-75">{sportIcons[s]}</div> : <Trophy className="w-6 h-6" />}</span>
+                  <span className={`p-3 rounded-2xl transition-colors ${fSport === s ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-white/10 text-slate-300 group-hover:text-indigo-400 group-hover:bg-indigo-500/20'}`}><span className="text-xs font-black tracking-tighter">{sportAbbr[s] || 'SP'}</span></span>
                   <span className={`text-[11px] font-black uppercase tracking-wider text-center leading-tight ${fSport === s ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{s}</span>
                 </button>
               ))}
@@ -1394,14 +1394,14 @@ function BookIndoorTab({ user, onDone }) {
                     <p className="text-slate-400 text-sm font-medium flex items-center gap-1.5"><MapPin className="w-4 h-4 text-indigo-400" /> {[turf.address?.town, turf.address?.district, turf.address?.province].filter(Boolean).join(', ')}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    {turf.phone && <span className="bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-lg text-xs font-bold text-white inline-flex items-center gap-1.5">📞 {turf.phone}</span>}
+                    {turf.phone && <span className="bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-lg text-xs font-bold text-white inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-indigo-400" /> {turf.phone}</span>}
                     <span className="bg-indigo-500/10 ring-1 ring-indigo-500/30 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider text-indigo-300 inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {turf.timing?.open || '06:00'} – {turf.timing?.close || '23:00'}</span>
                   </div>
                 </div>
 
                 {/* Badges Row (Mobile only - Desktop uses the above right-aligned layout) */}
                 <div className="flex md:hidden flex-wrap gap-2 mb-5">
-                  {turf.phone && <span className="bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white inline-flex items-center gap-1.5">📞 {turf.phone}</span>}
+                  {turf.phone && <span className="bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-indigo-400" /> {turf.phone}</span>}
                   <span className="bg-indigo-500/10 ring-1 ring-indigo-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-indigo-300 inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {turf.timing?.open || '06:00'} – {turf.timing?.close || '23:00'}</span>
                 </div>
 
@@ -1642,7 +1642,7 @@ function MyActivityTab({ user, onPay, onTeam, onChat, refreshKey, onRefresh }) {
         body: JSON.stringify({ player_id: user._id, action })
       });
       if (r.ok) {
-        setActionState(s => ({ ...s, [reqId]: action === 'accept' ? 'Accepted ✓' : 'Declined' }));
+        setActionState(s => ({ ...s, [reqId]: action === 'accept' ? 'Accepted' : 'Declined' }));
         setTimeout(() => {
           setRequests(prev => prev.filter(x => x._id !== reqId));
           if (onRefresh) onRefresh();
@@ -1720,7 +1720,7 @@ function MyActivityTab({ user, onPay, onTeam, onChat, refreshKey, onRefresh }) {
           <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500">
             {requests.map(req => {
               const st = actionState[req._id];
-              const accepted = st === 'Accepted ✓';
+              const accepted = st === 'Accepted';
               const declined = st === 'Declined';
               const done = accepted || declined;
               const isChallenge = req.type === 'challenge';
@@ -1730,10 +1730,10 @@ function MyActivityTab({ user, onPay, onTeam, onChat, refreshKey, onRefresh }) {
                     {isChallenge ? <Trophy className="w-7 h-7" /> : <UsersIcon className="w-7 h-7" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{isChallenge ? 'Squad Challenge ⚔️' : 'Join Request 🏅'}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{isChallenge ? 'Squad Challenge' : 'Join Request'}</p>
                     <h4 className="text-white font-black text-lg tracking-tight leading-tight">{req.from_name}</h4>
                     <p className="text-slate-300 text-sm font-medium mt-1">Wants you for <strong className="text-white">{req.sport}</strong> in <strong className="text-white">{req.area}</strong></p>
-                    {req.from_phone && <p className="text-slate-500 text-xs mt-1.5 font-mono">📞 {req.from_phone}</p>}
+                    {req.from_phone && <p className="text-slate-500 text-xs mt-1.5 font-mono flex items-center gap-1"><Phone className="w-3 h-3 text-slate-500" /> {req.from_phone}</p>}
                   </div>
                   {done ? (
                     <div className={`shrink-0 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest ring-1 ${accepted ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/40' : 'bg-white/5 text-slate-500 ring-white/10'}`}>

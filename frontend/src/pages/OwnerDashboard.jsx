@@ -435,7 +435,7 @@ function AddBookingModal({ courts, onClose, onSave, prefill }) {
     if (isMaintenance) {
       setForm(prev => ({ 
         ...prev, 
-        customerName: '🛠️ MAINTENANCE BLOCK', 
+        customerName: 'MAINTENANCE BLOCK', 
         phoneNumber: 'FACILITY', 
         amount: 0,
         type: 'maintenance'
@@ -674,16 +674,16 @@ function EditBookingModal({ booking, onClose, onUpdateStatus }) {
           <button
             onClick={() => onUpdateStatus(booking.id || booking._id, 'Confirmed')}
             disabled={booking.status === 'Confirmed'}
-            className="w-full py-4 bg-white hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+            className="w-full py-4 bg-white hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            ✓ Mark as Confirmed
+            <Check className="w-4 h-4" /> Mark as Confirmed
           </button>
           <button
             onClick={() => onUpdateStatus(booking.id || booking._id, 'Cancelled')}
             disabled={booking.status === 'Cancelled'}
-            className="w-full py-4 bg-rose-500/20 hover:bg-rose-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-rose-300 rounded-2xl font-black text-sm uppercase tracking-widest ring-1 ring-rose-500/40 transition-all active:scale-[0.98]"
+            className="w-full py-4 bg-rose-500/20 hover:bg-rose-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-rose-300 rounded-2xl font-black text-sm uppercase tracking-widest ring-1 ring-rose-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
-            ✕ Cancel Booking
+            <X className="w-4 h-4" /> Cancel Booking
           </button>
         </div>
       </div>

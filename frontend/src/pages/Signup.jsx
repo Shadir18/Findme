@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Target, ArrowRight, Upload, Trash2 } from 'lucide-react';
+import { Target, ArrowRight, Upload, Trash2, X } from 'lucide-react';
 
 const sriLankaData = {
   "Western": {
@@ -303,7 +303,7 @@ export default function Signup() {
                     ) : (
                       <div className="relative">
                         <input type="text" placeholder="Type Town Name" className={`${inputCls} !border-emerald-500/50 focus:!border-emerald-500`} value={formData.town} onChange={(e) => setFormData({ ...formData, town: e.target.value })} />
-                        <button type="button" onClick={() => { setIsCustomTown(false); setFormData({ ...formData, town: '' }); }} className="absolute -top-2 -right-2 bg-rose-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center hover:bg-rose-600 transition-colors">✕</button>
+                        <button type="button" onClick={() => { setIsCustomTown(false); setFormData({ ...formData, town: '' }); }} className="absolute -top-2 -right-2 bg-rose-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center hover:bg-rose-600 transition-colors"><X className="w-3 h-3" /></button>
                       </div>
                     )}
                   </div>
